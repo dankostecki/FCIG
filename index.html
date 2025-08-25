@@ -20,131 +20,197 @@
       border-radius: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       padding: 20px 30px;
-      max-width: 1000px;
+      max-width: 1100px;
       width: 100%;
     }
-    h2 {
-      margin: 0 0 10px;
-      color: #111827;
-    }
-    p {
-      margin: 0 0 20px;
-      color: #6b7280;
-    }
-    .controls {
-      margin-bottom: 15px;
-    }
+    h2 { margin: 0 0 10px; color: #111827; }
+    p { margin: 0 0 20px; color: #6b7280; }
+    .controls { margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
     .controls button {
       background: #fff;
       border: 1px solid #d1d5db;
       border-radius: 8px;
       padding: 8px 14px;
-      margin-right: 8px;
       cursor: pointer;
       font-weight: 500;
       transition: all 0.2s ease;
     }
-    .controls button:hover {
-      background: #f3f4f6;
-    }
+    .controls button:hover { background: #f3f4f6; }
     .controls button.active {
       background: #6366f1;
       color: white;
       border-color: #6366f1;
     }
-    #chart {
-      width: 100%;
-      height: 600px;
-    }
+    #chart { width: 100%; height: 600px; }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Financial Conditions Chart</h2>
-    <p>Interactive chart with multiple display modes</p>
+    <p>Interactive chart with display modes and time filters</p>
+
+    <!-- Tryb wykresu -->
     <div class="controls">
       <button id="btn-lines" class="active">Lines</button>
       <button id="btn-stacked">Stacked Area</button>
       <button id="btn-diff">Difference (FFR - 10Yr Treasury)</button>
     </div>
+
+    <!-- Zakres czasu -->
+    <div class="controls">
+      <button id="btn-all" class="active">All</button>
+      <button id="btn-10y">Last 10 Years</button>
+      <button id="btn-5y">Last 5 Years</button>
+      <button id="btn-3y">Last 3 Years</button>
+    </div>
+
     <div id="chart"></div>
   </div>
 
   <script>
+    let fullData = [];
     let tracesLines = [];
     let tracesStacked = [];
     let traceDiff = null;
-    let layout = {
+
+    const layout = {
       title: "FCI-G Components",
-      xaxis: {title: "Date"},
-      yaxis: {title: "Value"},
-      legend: {orientation:"h", y:-0.3},
-      margin: {t:50, r:20, l:50, b:80}
+      xaxis: {
+        title: "Date",
+        rangeslider: { visible: true } // pasek zakresu
+      },
+      yaxis: { title: "Value" },
+      legend: { orientation: "h", y: -0.3 },
+      margin: { t: 50, r: 20, l: 50, b: 80 }
     };
 
-    // Ładowanie danych z JSON
+    // Funkcja filtrująca dane po czasie
+    function filterByYears(years) {
+      if (!years) return fullData;
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - years);
+      return fullData.filter(d => new Date(d.date) >= cutoff);
+    }
+
     async function loadData() {
       const res = await fetch("./data/converted.json");
-      const json = await res.json();
+      fullData = await res.json();
 
-      // sprawdzamy dostępne kolumny
-      const keys = Object.keys(json[0]).filter(k => k !== "date");
+      const keys = Object.keys(fullData[0]).filter(k => k !== "date");
 
-      // budujemy serie (line)
-      tracesLines = keys.map((key, i) => ({
-        x: json.map(d => d.date),
-        y: json.map(d => d[key]),
+      // Linie
+      tracesLines = keys.map((key) => ({
+        x: fullData.map(d => d.date),
+        y: fullData.map(d => d[key]),
         mode: "lines",
         name: key,
-        line: {width: 2}
+        line: { width: 2 }
       }));
 
-      // stackowane (area)
+      // Stack
       tracesStacked = keys.map((key) => ({
-        x: json.map(d => d.date),
-        y: json.map(d => d[key]),
+        x: fullData.map(d => d.date),
+        y: fullData.map(d => d[key]),
         stackgroup: "one",
         name: key
       }));
 
-      // przykładowa różnica – FFR - 10Yr Treasury
+      // Różnica
       if (keys.includes("FFR") && keys.includes("10Yr Treasury")) {
         traceDiff = {
-          x: json.map(d => d.date),
-          y: json.map(d => d["FFR"] - d["10Yr Treasury"]),
+          x: fullData.map(d => d.date),
+          y: fullData.map(d => d["FFR"] - d["10Yr Treasury"]),
           mode: "lines",
           name: "FFR - 10Yr Treasury",
-          line: {color: "purple", dash: "dot"}
+          line: { color: "purple", dash: "dot" }
         };
       }
 
-      // start: wykres liniowy
-      Plotly.newPlot("chart", tracesLines, layout, {responsive:true});
+      // Startowy wykres
+      Plotly.newPlot("chart", tracesLines, layout, { responsive: true });
     }
 
     loadData();
 
-    // przyciski
+    // Funkcja rysująca z filtrowaniem lat
+    function updateChart(mode, years) {
+      const filtered = filterByYears(years);
+
+      let traces = [];
+      if (mode === "lines") {
+        traces = tracesLines.map(t => ({
+          ...t,
+          x: filtered.map(d => d.date),
+          y: filtered.map(d => d[t.name])
+        }));
+      } else if (mode === "stacked") {
+        traces = tracesStacked.map(t => ({
+          ...t,
+          x: filtered.map(d => d.date),
+          y: filtered.map(d => d[t.name])
+        }));
+      } else if (mode === "diff" && traceDiff) {
+        traces = tracesLines.map(t => ({
+          ...t,
+          x: filtered.map(d => d.date),
+          y: filtered.map(d => d[t.name])
+        }));
+        traces.push({
+          ...traceDiff,
+          x: filtered.map(d => d.date),
+          y: filtered.map(d => d["FFR"] - d["10Yr Treasury"])
+        });
+      }
+
+      Plotly.react("chart", traces, layout);
+    }
+
+    // Stan aktualny
+    let currentMode = "lines";
+    let currentYears = null;
+
+    // Obsługa guzików trybu
     document.getElementById("btn-lines").onclick = () => {
-      Plotly.react("chart", tracesLines, layout);
-      setActive("btn-lines");
+      currentMode = "lines";
+      updateChart(currentMode, currentYears);
+      setActive("btn-lines", ["btn-stacked", "btn-diff"]);
     };
     document.getElementById("btn-stacked").onclick = () => {
-      Plotly.react("chart", tracesStacked, layout);
-      setActive("btn-stacked");
+      currentMode = "stacked";
+      updateChart(currentMode, currentYears);
+      setActive("btn-stacked", ["btn-lines", "btn-diff"]);
     };
     document.getElementById("btn-diff").onclick = () => {
-      if (traceDiff) {
-        Plotly.react("chart", [...tracesLines, traceDiff], layout);
-        setActive("btn-diff");
-      } else {
-        alert("Brak danych do różnicy (FFR, 10Yr Treasury).");
-      }
+      currentMode = "diff";
+      updateChart(currentMode, currentYears);
+      setActive("btn-diff", ["btn-lines", "btn-stacked"]);
     };
 
-    function setActive(id){
-      document.querySelectorAll(".controls button").forEach(btn => btn.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
+    // Obsługa guzików zakresu
+    document.getElementById("btn-all").onclick = () => {
+      currentYears = null;
+      updateChart(currentMode, currentYears);
+      setActive("btn-all", ["btn-10y", "btn-5y", "btn-3y"]);
+    };
+    document.getElementById("btn-10y").onclick = () => {
+      currentYears = 10;
+      updateChart(currentMode, currentYears);
+      setActive("btn-10y", ["btn-all", "btn-5y", "btn-3y"]);
+    };
+    document.getElementById("btn-5y").onclick = () => {
+      currentYears = 5;
+      updateChart(currentMode, currentYears);
+      setActive("btn-5y", ["btn-all", "btn-10y", "btn-3y"]);
+    };
+    document.getElementById("btn-3y").onclick = () => {
+      currentYears = 3;
+      updateChart(currentMode, currentYears);
+      setActive("btn-3y", ["btn-all", "btn-10y", "btn-5y"]);
+    };
+
+    function setActive(activeId, others) {
+      document.getElementById(activeId).classList.add("active");
+      others.forEach(id => document.getElementById(id).classList.remove("active"));
     }
   </script>
 </body>
