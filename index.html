@@ -20,18 +20,27 @@
       border-radius: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       padding: 20px 30px;
-      max-width: 1100px;
+      max-width: 1200px;
       width: 100%;
       position: relative;
     }
-    #chart { width: 100%; height: 600px; }
+    #chart { width: 100%; height: 700px; } /* większa wysokość */
+    h2 { margin: 0 0 10px; color: #111827; }
+    p { margin: 0 0 20px; color: #6b7280; }
 
     /* Drawer */
+    .drawer-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.3);
+      display: none;
+      z-index: 999;
+    }
     .drawer {
       position: fixed;
-      top: 0;
-      right: -320px;
-      width: 300px;
+      top: 0; right: -340px;
+      width: 320px;
       height: 100%;
       background: #fff;
       box-shadow: -2px 0 10px rgba(0,0,0,0.2);
@@ -41,25 +50,25 @@
       z-index: 1000;
     }
     .drawer.open { right: 0; }
+    .drawer-overlay.active { display: block; }
     .drawer h3 { margin-top: 0; }
     .drawer section { margin-bottom: 20px; }
-    .drawer button, .drawer label {
+    .drawer button, .drawer select, .drawer input {
       display: block;
       margin-bottom: 10px;
       padding: 8px 12px;
       border-radius: 8px;
       border: 1px solid #d1d5db;
       background: #f9fafb;
-      cursor: pointer;
       width: 100%;
-      text-align: left;
+      font-size: 14px;
     }
     .drawer button.active {
       background: #6366f1;
       color: white;
       border-color: #6366f1;
     }
-    .drawer label input { margin-right: 8px; }
+
     /* Toggle button */
     .toggle-btn {
       position: absolute;
@@ -73,17 +82,40 @@
       cursor: pointer;
       font-weight: bold;
     }
+
+    /* Serie pod wykresem */
+    .series-panel {
+      margin-top: 20px;
+      padding: 10px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .series-panel label {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .series-panel input {
+      margin-right: 6px;
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Financial Conditions Chart</h2>
-    <p>Interactive chart with side menu controls</p>
-    <button class="toggle-btn" onclick="toggleDrawer()">⚙️ Settings</button>
+    <p>Interactive chart with side panel and custom series</p>
+    <button class="toggle-btn" onclick="openDrawer()">⚙️ Settings</button>
     <div id="chart"></div>
+
+    <!-- Serie pod wykresem -->
+    <div class="series-panel" id="series-list"></div>
   </div>
 
   <!-- Drawer -->
+  <div id="drawer-overlay" class="drawer-overlay" onclick="closeDrawer()"></div>
   <div id="drawer" class="drawer">
     <h3>Chart Settings</h3>
 
@@ -103,8 +135,18 @@
     </section>
 
     <section>
-      <h4>Series</h4>
-      <div id="series-list"></div>
+      <h4>Create Custom Series</h4>
+      <select id="col1"></select>
+      <select id="operation">
+        <option value="+">+</option>
+        <option value="-">-</option>
+        <option value="*">×</option>
+        <option value="/">÷</option>
+      </select>
+      <select id="col2"></select>
+      <input id="seriesName" type="text" placeholder="Series name" />
+      <button onclick="addCustomSeries()">➕ Add Series</button>
+      <div id="custom-series-list"></div>
     </section>
   </div>
 
@@ -114,14 +156,15 @@
     let visibleSeries = {};
     let currentMode = "lines";
     let currentYears = null;
+    let customSeries = [];
     let traceDiff = null;
 
     const layout = {
       title: "FCI-G Components",
       xaxis: { title: "Date", rangeslider: { visible: true } },
       yaxis: { title: "Value" },
-      legend: { orientation: "h", y: -0.3 },
-      margin: { t: 50, r: 20, l: 50, b: 80 }
+      legend: { orientation: "h" },
+      margin: { t: 50, r: 20, l: 50, b: 100 }
     };
 
     function filterByYears(years) {
@@ -136,20 +179,26 @@
       fullData = await res.json();
       keys = Object.keys(fullData[0]).filter(k => k !== "date");
 
-      // domyślnie wszystkie widoczne
       keys.forEach(k => visibleSeries[k] = true);
 
-      // przygotuj różnicę
       if (keys.includes("FFR") && keys.includes("10Yr Treasury")) {
         traceDiff = { name: "FFR - 10Yr Treasury" };
       }
 
-      // zbuduj listę checkboxów
+      // lista serii pod wykresem
       const list = document.getElementById("series-list");
       keys.forEach(k => {
         const lbl = document.createElement("label");
         lbl.innerHTML = `<input type="checkbox" checked onchange="toggleSeries('${k}')"> ${k}`;
         list.appendChild(lbl);
+      });
+
+      // dropdowny do custom series
+      const col1 = document.getElementById("col1");
+      const col2 = document.getElementById("col2");
+      keys.forEach(k => {
+        col1.innerHTML += `<option value="${k}">${k}</option>`;
+        col2.innerHTML += `<option value="${k}">${k}</option>`;
       });
 
       updateChart();
@@ -186,6 +235,18 @@
         });
       }
 
+      customSeries.forEach(s => {
+        if (!s.hidden) {
+          traces.push({
+            x: filtered.map(d => d.date),
+            y: s.fn(filtered),
+            mode: "lines",
+            name: s.name,
+            line: { dash: "dot" }
+          });
+        }
+      });
+
       Plotly.react("chart", traces, layout);
     }
 
@@ -194,11 +255,52 @@
       updateChart();
     }
 
-    function toggleDrawer() {
-      document.getElementById("drawer").classList.toggle("open");
+    function addCustomSeries() {
+      const col1 = document.getElementById("col1").value;
+      const op = document.getElementById("operation").value;
+      const col2 = document.getElementById("col2").value;
+      const name = document.getElementById("seriesName").value || `${col1} ${op} ${col2}`;
+
+      const fn = (data) => data.map(d => {
+        const a = d[col1] || 0;
+        const b = d[col2] || 0;
+        switch(op) {
+          case "+": return a + b;
+          case "-": return a - b;
+          case "*": return a * b;
+          case "/": return b !== 0 ? a / b : null;
+        }
+      });
+
+      customSeries.push({ name, fn });
+
+      const div = document.getElementById("custom-series-list");
+      const lbl = document.createElement("label");
+      lbl.innerHTML = `<input type="checkbox" checked onchange="toggleCustom('${name}')"> ${name}`;
+      div.appendChild(lbl);
+
+      updateChart();
     }
 
-    // przyciski trybu
+    function toggleCustom(name) {
+      const s = customSeries.find(s => s.name === name);
+      if (s) {
+        s.hidden = !s.hidden;
+        updateChart();
+      }
+    }
+
+    // Drawer controls
+    function openDrawer() {
+      document.getElementById("drawer").classList.add("open");
+      document.getElementById("drawer-overlay").classList.add("active");
+    }
+    function closeDrawer() {
+      document.getElementById("drawer").classList.remove("open");
+      document.getElementById("drawer-overlay").classList.remove("active");
+    }
+
+    // mode buttons
     ["lines","stacked","diff"].forEach(m => {
       document.getElementById("mode-"+m).onclick = () => {
         currentMode = m;
@@ -207,7 +309,7 @@
       };
     });
 
-    // przyciski zakresu
+    // range buttons
     [["all",null],["10y",10],["5y",5],["3y",3]].forEach(([id,years]) => {
       document.getElementById("range-"+id).onclick = () => {
         currentYears = years;
