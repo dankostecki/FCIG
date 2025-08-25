@@ -65,54 +65,87 @@
     <div class="controls">
       <button id="btn-lines" class="active">Lines</button>
       <button id="btn-stacked">Stacked Area</button>
-      <button id="btn-diff">Difference (FFR - Treasury)</button>
+      <button id="btn-diff">Difference (FFR - 10Yr Treasury)</button>
     </div>
     <div id="chart"></div>
   </div>
 
   <script>
-    // przykładowe dane (podmień na fetch z /data/converted.json)
-    const data = [
-      {date:"1990-01", FFR:-0.02, Treasury:-0.01, Mortgage:0.01},
-      {date:"1990-02", FFR:-0.03, Treasury:-0.02, Mortgage:0.02},
-      {date:"1990-03", FFR:-0.04, Treasury:-0.01, Mortgage:0.03},
-      {date:"1990-04", FFR:-0.03, Treasury:-0.00, Mortgage:0.04},
-      {date:"1990-05", FFR:-0.02, Treasury:0.01,  Mortgage:0.05}
-    ];
+    let tracesLines = [];
+    let tracesStacked = [];
+    let traceDiff = null;
+    let layout = {
+      title: "FCI-G Components",
+      xaxis: {title: "Date"},
+      yaxis: {title: "Value"},
+      legend: {orientation:"h", y:-0.3},
+      margin: {t:50, r:20, l:50, b:80}
+    };
 
-    // podstawowe serie
-    const tracesLines = [
-      {
-        x: data.map(d=>d.date),
-        y: data.map(d=>d.FFR),
+    // Ładowanie danych z JSON
+    async function loadData() {
+      const res = await fetch("./data/converted.json");
+      const json = await res.json();
+
+      // sprawdzamy dostępne kolumny
+      const keys = Object.keys(json[0]).filter(k => k !== "date");
+
+      // budujemy serie (line)
+      tracesLines = keys.map((key, i) => ({
+        x: json.map(d => d.date),
+        y: json.map(d => d[key]),
         mode: "lines",
-        name: "FFR",
-        line: {color: "#ef4444"}
-      },
-      {
-        x: data.map(d=>d.date),
-        y: data.map(d=>d.Treasury),
-        mode: "lines",
-        name: "10Yr Treasury",
-        line: {color: "#3b82f6"}
-      },
-      {
-        x: data.map(d=>d.date),
-        y: data.map(d=>d.Mortgage),
-        mode: "lines",
-        name: "Mortgage Rate",
-        line: {color: "#10b981"}
+        name: key,
+        line: {width: 2}
+      }));
+
+      // stackowane (area)
+      tracesStacked = keys.map((key) => ({
+        x: json.map(d => d.date),
+        y: json.map(d => d[key]),
+        stackgroup: "one",
+        name: key
+      }));
+
+      // przykładowa różnica – FFR - 10Yr Treasury
+      if (keys.includes("FFR") && keys.includes("10Yr Treasury")) {
+        traceDiff = {
+          x: json.map(d => d.date),
+          y: json.map(d => d["FFR"] - d["10Yr Treasury"]),
+          mode: "lines",
+          name: "FFR - 10Yr Treasury",
+          line: {color: "purple", dash: "dot"}
+        };
       }
-    ];
 
-    // stack
-    const tracesStacked = [
-      {...tracesLines[0], stackgroup:"one"},
-      {...tracesLines[1], stackgroup:"one"},
-      {...tracesLines[2], stackgroup:"one"}
-    ];
+      // start: wykres liniowy
+      Plotly.newPlot("chart", tracesLines, layout, {responsive:true});
+    }
 
-    // difference
-    const traceDiff = {
-      x: data.map(d=>d.date),
-      y:
+    loadData();
+
+    // przyciski
+    document.getElementById("btn-lines").onclick = () => {
+      Plotly.react("chart", tracesLines, layout);
+      setActive("btn-lines");
+    };
+    document.getElementById("btn-stacked").onclick = () => {
+      Plotly.react("chart", tracesStacked, layout);
+      setActive("btn-stacked");
+    };
+    document.getElementById("btn-diff").onclick = () => {
+      if (traceDiff) {
+        Plotly.react("chart", [...tracesLines, traceDiff], layout);
+        setActive("btn-diff");
+      } else {
+        alert("Brak danych do różnicy (FFR, 10Yr Treasury).");
+      }
+    };
+
+    function setActive(id){
+      document.querySelectorAll(".controls button").forEach(btn => btn.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+  </script>
+</body>
+</html>
