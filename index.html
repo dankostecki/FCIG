@@ -30,8 +30,8 @@
 </head>
 <body>
   <div class="card">
-    <h2>Financial Conditions (Stacked Bars)</h2>
-    <p>Każdy słupek = komponenty FCI-G, suma = FCI-G Index</p>
+    <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
+    <p>Komponenty jako słupki, suma (FCI-G) jako linia</p>
     <div id="chart"></div>
   </div>
 
@@ -46,9 +46,7 @@
         "BBB", "Stock Market", "House Prices", "Dollar"
       ];
 
-      const sums = data.map(d => parseFloat(d[fciKey]));
-
-      // komponenty jako stacked bars
+      // komponenty (stacked bars)
       const traces = componentKeys.map((key) => ({
         x: data.map(d => d.date),
         y: data.map(d => parseFloat(d[key])),
@@ -58,29 +56,25 @@
         marker: { line: { width: 1, color: "#fff" } }
       }));
 
-      // etykiety sumy nad słupkiem
-      const fciLabels = {
+      // linia FCI-G
+      const fciLine = {
         x: data.map(d => d.date),
-        y: sums,
-        mode: "text",
-        text: sums.map(v => v.toFixed(2)),
-        textposition: "outside",
-        showlegend: false,
-        type: "scatter",
-        textfont: { color: "#111827", size: 12 },
-        hoverinfo: "skip"
+        y: data.map(d => parseFloat(d[fciKey])),
+        mode: "lines",
+        name: "FCI-G Index (baseline)",
+        line: { color: "#111827", width: 3 }
       };
 
       const layout = {
         barmode: "stack",
         xaxis: { title: "Date", tickangle: -45, automargin: true },
         yaxis: { title: "Value" },
-        legend: { orientation: "h", y: -0.4 },
-        margin: { t: 50, r: 20, l: 50, b: 150 },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 50, r: 20, l: 50, b: 120 },
         hovermode: "x unified"
       };
 
-      Plotly.newPlot("chart", [...traces, fciLabels], layout, {responsive:true});
+      Plotly.newPlot("chart", [...traces, fciLine], layout, {responsive:true});
     }
 
     loadData();
