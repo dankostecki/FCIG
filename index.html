@@ -24,9 +24,8 @@
       max-width: 1200px;
       width: 100%;
     }
-    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
+    #impactChart { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
-    p { margin: 0 0 20px; color: #6b7280; }
 
     .controls {
       display: flex;
@@ -43,6 +42,11 @@
       cursor: pointer;
     }
     .controls button:hover, .controls select:hover { background: #e5e7eb; }
+    .date-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -50,8 +54,12 @@
   <div class="card">
     <h2>Analiza wkładów w Δ FCI-G (ranking)</h2>
     <div class="controls">
-      <label>Od: <input type="date" id="startDate"></label>
-      <label>Do: <input type="date" id="endDate"></label>
+      <div class="date-controls">
+        <label>Od: <input type="date" id="startDate"></label>
+        <label>Do: <input type="date" id="endDate"></label>
+        <button onclick="applyRange()">Zastosuj</button>
+      </div>
+      <button onclick="quickRange('ytd')">YTD</button>
       <button onclick="quickRange(1)">1Y</button>
       <button onclick="quickRange(3)">3Y</button>
       <button onclick="quickRange(5)">5Y</button>
@@ -60,7 +68,6 @@
         <option value="delta">Udział w Δ FCI-G</option>
         <option value="abs">Udział w |Δ|</option>
       </select>
-      <button onclick="applyRange()">Zastosuj</button>
     </div>
     <div id="impactChart"></div>
   </div>
@@ -75,7 +82,6 @@
       const data = await res.json();
       globalData = data;
 
-      // Ustaw domyślne daty
       document.getElementById("startDate").value = data[0].date;
       document.getElementById("endDate").value = data[data.length-1].date;
 
@@ -98,15 +104,22 @@
 
       if (mode === "abs") {
         const totalAbs = contributions.reduce((a,b) => a + Math.abs(b.delta), 0);
-        contributions.forEach(c => {
-          c.shareAbs = totalAbs !== 0 ? (Math.abs(c.delta) / totalAbs * 100) : 0;
+        contributions.forEach(c => { 
+          c.shareAbs = totalAbs !== 0 ? (Math.abs(c.delta) / totalAbs * 100) : 0; 
         });
         contributions.sort((a,b) => b.shareAbs - a.shareAbs);
       } else {
-        // sortowanie easing (zielone) na górze, tightening na dole
-        const easing = contributions.filter(c => c.shareDelta < 0).sort((a,b) => a.shareDelta - b.shareDelta);
+        // ✅ poprawione sortowanie easing: na górze najbardziej ujemne
+        const easing = contributions
+          .filter(c => c.shareDelta < 0)
+          .sort((a,b) => b.shareDelta - a.shareDelta); // np. -150% nad -20%
+
         const neutral = contributions.filter(c => c.shareDelta === 0);
-        const tightening = contributions.filter(c => c.shareDelta > 0).sort((a,b) => b.shareDelta - a.shareDelta);
+
+        const tightening = contributions
+          .filter(c => c.shareDelta > 0)
+          .sort((a,b) => b.shareDelta - a.shareDelta); // największe czerwone na dole
+
         contributions = [...easing, ...neutral, ...tightening];
       }
 
@@ -117,12 +130,17 @@
         c.delta > 0 ? "rgba(220,38,38,0.8)" : (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)")
       );
 
+      const textLabels = contributions.map(c => {
+        const val = mode === "abs" ? c.shareAbs : c.shareDelta;
+        return `${val.toFixed(1)}% (Δ=${c.delta.toFixed(3)})`;
+      });
+
       const trace = {
         type: "bar",
         x: x,
         y: y,
         orientation: "h",
-        text: x.map(v => v.toFixed(1) + "%"),
+        text: textLabels,
         textposition: "outside",
         marker: { color: colors }
       };
@@ -130,23 +148,31 @@
       Plotly.newPlot("impactChart", [trace], {
         title: `Ranking komponentów (${start.date} → ${end.date}, tryb: ${mode === "abs" ? "udział w |Δ|" : "udział w Δ FCI-G"})`,
         xaxis: { title: "Udział (%)" },
-        margin: { t: 80, r: 30, l: 120, b: 60 }
+        margin: { t: 80, r: 30, l: 160, b: 60 }
       });
     }
 
     function quickRange(years) {
       const data = globalData;
       if (!data.length) return;
+      const endDate = data[data.length-1].date;
+
       if (years === "all") {
         document.getElementById("startDate").value = data[0].date;
-        document.getElementById("endDate").value = data[data.length-1].date;
+        document.getElementById("endDate").value = endDate;
+      } else if (years === "ytd") {
+        const end = new Date(endDate);
+        const start = new Date(end.getFullYear(), 0, 1); // 1 Jan
+        const startDate = data.find(d => new Date(d.date) >= start);
+        document.getElementById("startDate").value = startDate ? startDate.date : data[0].date;
+        document.getElementById("endDate").value = endDate;
       } else {
-        const end = new Date(data[data.length-1].date);
+        const end = new Date(endDate);
         const start = new Date(end);
         start.setFullYear(start.getFullYear() - years);
         const startDate = data.find(d => new Date(d.date) >= start);
         document.getElementById("startDate").value = startDate ? startDate.date : data[0].date;
-        document.getElementById("endDate").value = data[data.length-1].date;
+        document.getElementById("endDate").value = endDate;
       }
       applyRange();
     }
