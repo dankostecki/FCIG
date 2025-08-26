@@ -26,29 +26,6 @@
     }
     #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
-    p { margin: 0 0 20px; color: #6b7280; }
-
-    .summary-section { margin-top: 20px; }
-    .summary-section h3 { margin-bottom: 10px; color: #374151; }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 15px;
-    }
-    .summary-card {
-      border-radius: 12px;
-      padding: 15px;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .tightening { background: linear-gradient(135deg, #dc2626, #ef4444); }
-    .easing { background: linear-gradient(135deg, #059669, #10b981); }
-    .neutral { background: linear-gradient(135deg, #6b7280, #9ca3af); }
-    .summary-card h4 { margin: 0; font-size: 16px; }
-    .summary-card span { font-size: 14px; }
 
     .controls {
       display: flex;
@@ -57,30 +34,19 @@
       margin-bottom: 15px;
       align-items: center;
     }
-    .controls input, .controls button, .controls select {
+    .controls input, .controls button {
       padding: 6px 12px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       background: #f9fafb;
       cursor: pointer;
     }
-    .controls button:hover, .controls select:hover { background: #e5e7eb; }
+    .controls button:hover { background: #e5e7eb; }
     .date-controls {
       display: flex;
       gap: 10px;
       align-items: center;
     }
-
-    .legend {
-      margin-top: 15px;
-      font-size: 14px;
-      color: #374151;
-      background: #f9fafb;
-      padding: 10px 15px;
-      border-radius: 10px;
-      border: 1px solid #e5e7eb;
-    }
-    .legend ul { margin: 6px 0 0 18px; }
   </style>
 </head>
 <body>
@@ -105,22 +71,9 @@
     <div id="chart3"></div>
   </div>
 
-  <!-- Podsumowanie -->
-  <div class="card">
-    <h2>Podsumowanie zmian</h2>
-    <div class="summary-section">
-      <h3>m/m (ostatni miesiąc)</h3>
-      <div class="summary-grid" id="summary-mm"></div>
-    </div>
-    <div class="summary-section">
-      <h3>r/r (ostatni rok)</h3>
-      <div class="summary-grid" id="summary-yy"></div>
-    </div>
-  </div>
-
   <!-- Analiza wkładów -->
   <div class="card">
-    <h2>Analiza wkładów w Δ FCI-G (ranking)</h2>
+    <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
     <div class="controls">
       <div class="date-controls">
         <label>Od: <input type="date" id="startDate"></label>
@@ -132,22 +85,8 @@
       <button onclick="quickRange(3)">3Y</button>
       <button onclick="quickRange(5)">5Y</button>
       <button onclick="quickRange('all')">All</button>
-      <select id="modeSelect" onchange="applyRange()">
-        <option value="delta">Udział w Δ FCI-G</option>
-        <option value="abs">Udział w |Δ|</option>
-        <option value="weighted">Ważona zmiana</option>
-      </select>
     </div>
     <div id="impactChart"></div>
-
-    <div class="legend">
-      <strong>Legenda trybów:</strong>
-      <ul>
-        <li><b>Udział w Δ FCI-G</b> – kto najbardziej ciągnął indeks w górę lub dół w wybranym okresie (udział względny, może być >100% lub <0%).</li>
-        <li><b>Udział w |Δ|</b> – kto miał największe zmiany względem innych (udziały sumują się do 100%).</li>
-        <li><b>Ważona zmiana</b> – suma miesięcznych (udział w FCI-G × zmiana komponentu) w wybranym okresie; pokazuje wpływ z uwzględnieniem wag w czasie.</li>
-      </ul>
-    </div>
   </div>
 
   <script>
@@ -164,8 +103,7 @@
       document.getElementById("endDate").value = data[data.length-1].date;
 
       drawCharts(data);
-      updateSummary();
-      updateImpact(data[0].date, data[data.length-1].date, "delta");
+      updateImpact(data[0].date, data[data.length-1].date);
     }
 
     function drawCharts(data) {
@@ -215,7 +153,7 @@
         hovermode: "x unified"
       });
 
-      // Chart 2 (udziały procentowe)
+      // Chart 2
       const percentData = data.map(d => {
         const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
         const total = values.reduce((a,b) => a+b, 0);
@@ -240,7 +178,7 @@
         hovermode: "x unified"
       });
 
-      // Chart 3 (historyczne udziały)
+      // Chart 3
       const traces3 = componentKeys.map((key) => ({
         x: percentData.map(d => d.date),
         y: percentData.map(d => d[key]),
@@ -256,134 +194,41 @@
       });
     }
 
-    function updateSummary() {
-      const data = globalData;
-      if (data.length < 13) return;
-      const end = data[data.length-1];
-      const prevMonth = data[data.length-2];
-      const prevYear = data[data.length-13];
-
-      const calcChanges = (start, end) => {
-        const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
-        const deltas = componentKeys.map(k => ({
-          component: k,
-          delta: parseFloat(end[k]) - parseFloat(start[k])
-        }));
-        const totalAbs = deltas.reduce((a,b) => a + Math.abs(b.delta), 0);
-
-        return deltas.map(d => {
-          const shareFCI = fciChange !== 0 ? (d.delta / fciChange * 100) : 0;
-          const shareAbs = totalAbs !== 0 ? (Math.abs(d.delta) / totalAbs * 100) : 0;
-          return {
-            component: d.component,
-            change: d.delta.toFixed(3),
-            shareFCI: shareFCI.toFixed(1) + "%",
-            shareAbs: shareAbs.toFixed(1) + "%",
-            direction: d.delta > 0 ? "tightening" : (d.delta < 0 ? "easing" : "neutral")
-          };
-        }).sort((a,b) => parseFloat(b.shareAbs) - parseFloat(a.shareAbs));
-      };
-
-      renderCards("summary-mm", calcChanges(prevMonth, end));
-      renderCards("summary-yy", calcChanges(prevYear, end));
-    }
-
-    function renderCards(containerId, data) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-      data.forEach(row => {
-        const div = document.createElement("div");
-        div.classList.add("summary-card");
-        div.classList.add(row.direction);
-        div.innerHTML = `
-          <h4>${row.component}</h4>
-          <span>Zmiana: ${row.change}</span>
-          <span>Udział w Δ FCI-G: ${row.shareFCI}</span>
-          <span>Udział w |Δ|: ${row.shareAbs}</span>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    // --- Ranking
-    function updateImpact(startDate, endDate, mode) {
+    function updateImpact(startDate, endDate) {
       const data = globalData.filter(d => d.date >= startDate && d.date <= endDate);
       if (data.length < 2) return;
 
       const start = data[0];
       const end = data[data.length-1];
-      const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
 
-      let contributions = componentKeys.map(k => {
-        const delta = parseFloat(end[k]) - parseFloat(start[k]);
-        const shareDelta = fciChange !== 0 ? (delta / fciChange * 100) : 0;
-        return { component: k, delta, shareDelta };
-      });
+      const contributions = [
+        { component: fciKey, delta: parseFloat(end[fciKey]) - parseFloat(start[fciKey]) },
+        ...componentKeys.map(k => ({
+          component: k,
+          delta: parseFloat(end[k]) - parseFloat(start[k])
+        }))
+      ];
 
-      if (mode === "abs") {
-        const totalAbs = contributions.reduce((a,b) => a + Math.abs(b.delta), 0);
-        contributions.forEach(c => { 
-          c.shareAbs = totalAbs !== 0 ? (Math.abs(c.delta) / totalAbs * 100) : 0; 
-        });
-        contributions.sort((a,b) => b.shareAbs - a.shareAbs);
-      } else if (mode === "weighted") {
-        // obliczamy wagę w czasie
-        let weighted = componentKeys.map(k => ({component: k, weightedSum: 0}));
-        for (let i = 1; i < data.length; i++) {
-          const prev = data[i-1];
-          const curr = data[i];
-          const fciLevel = Object.values(prev).slice(1).reduce((a,b) => a + Math.abs(parseFloat(b)), 0);
-          componentKeys.forEach(k => {
-            const delta = parseFloat(curr[k]) - parseFloat(prev[k]);
-            const weight = fciLevel !== 0 ? Math.abs(parseFloat(prev[k])) / fciLevel : 0;
-            const contrib = weight * delta;
-            weighted.find(w => w.component === k).weightedSum += contrib;
-          });
-        }
-        contributions = weighted;
-        contributions.sort((a,b) => Math.abs(b.weightedSum) - Math.abs(a.weightedSum));
-      } else {
-        const easing = contributions.filter(c => c.shareDelta < 0).sort((a,b) => a.shareDelta - b.shareDelta);
-        const neutral = contributions.filter(c => c.shareDelta === 0);
-        const tightening = contributions.filter(c => c.shareDelta > 0).sort((a,b) => b.shareDelta - a.shareDelta);
-        contributions = [...easing, ...neutral, ...tightening];
-      }
-
-      let x, labels;
-      if (mode === "abs") {
-        x = contributions.map(c => c.shareAbs);
-        labels = x.map(v => v.toFixed(1) + "%");
-      } else if (mode === "weighted") {
-        x = contributions.map(c => c.weightedSum);
-        labels = x.map(v => v.toFixed(3));
-      } else {
-        x = contributions.map(c => c.shareDelta);
-        labels = x.map(v => v.toFixed(1) + "%");
-      }
-
-      const y = contributions.map(c => c.component);
-
-      const colors = contributions.map(c => {
-        if (mode === "weighted") {
-          return c.weightedSum > 0 ? "rgba(220,38,38,0.8)" : (c.weightedSum < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)");
-        } else {
-          return c.delta > 0 ? "rgba(220,38,38,0.8)" : (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)");
-        }
-      });
+      contributions.sort((a,b) => a.delta - b.delta);
 
       const trace = {
         type: "bar",
-        x: x,
-        y: y,
+        x: contributions.map(c => c.delta),
+        y: contributions.map(c => c.component),
         orientation: "h",
-        text: labels,
+        text: contributions.map(c => c.delta.toFixed(3)),
         textposition: "outside",
-        marker: { color: colors }
+        marker: {
+          color: contributions.map(c =>
+            c.delta > 0 ? "rgba(220,38,38,0.8)" :
+            (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)")
+          )
+        }
       };
 
       Plotly.newPlot("impactChart", [trace], {
-        title: `Ranking komponentów (${start.date} → ${end.date}, tryb: ${mode})`,
-        xaxis: { title: mode === "abs" ? "Udział (%)" : (mode === "delta" ? "Udział (%)" : "Ważona zmiana") },
+        title: `Zmiana poziomu indeksu i komponentów (${start.date} → ${end.date})`,
+        xaxis: { title: "Δ (punkty indeksowe)" },
         margin: { t: 80, r: 30, l: 160, b: 60 }
       });
     }
@@ -416,8 +261,7 @@
     function applyRange() {
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
-      const mode = document.getElementById("modeSelect").value;
-      updateImpact(startDate, endDate, mode);
+      updateImpact(startDate, endDate);
     }
 
     loadData();
