@@ -24,7 +24,7 @@
       max-width: 1200px;
       width: 100%;
     }
-    #chart1, #chart2 { width: 100%; height: 600px; }
+    #chart1, #chart2, #chart3 { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
     p { margin: 0 0 20px; color: #6b7280; }
   </style>
@@ -40,8 +40,15 @@
   <!-- Wykres 2 -->
   <div class="card">
     <h2>Procentowy udział komponentów w FCI-G</h2>
-    <p>Udziały liczone względem sumy wartości absolutnych</p>
+    <p>Udziały liczone względem sumy wartości absolutnych (suma = 100%)</p>
     <div id="chart2"></div>
+  </div>
+
+  <!-- Wykres 3 -->
+  <div class="card">
+    <h2>Historyczne udziały komponentów</h2>
+    <p>Linie pokazują zmiany udziałów komponentów w czasie (wartości bezwzględne → % udziału)</p>
+    <div id="chart3"></div>
   </div>
 
   <script>
@@ -85,7 +92,6 @@
       Plotly.newPlot("chart1", [...traces1, fciLine], layout1, {responsive:true});
 
       // ---------- WYKRES 2 ----------
-      // obliczamy udziały procentowe (względem wartości absolutnych)
       const percentData = data.map(d => {
         const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
         const total = values.reduce((a,b) => a+b, 0);
@@ -113,6 +119,25 @@
       };
 
       Plotly.newPlot("chart2", traces2, layout2, {responsive:true});
+
+      // ---------- WYKRES 3 ----------
+      const traces3 = componentKeys.map((key) => ({
+        x: percentData.map(d => d.date),
+        y: percentData.map(d => d[key]),
+        mode: "lines",
+        name: key,
+        line: { width: 2 }
+      }));
+
+      const layout3 = {
+        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        yaxis: { title: "Share (%)", range: [0,100] },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 50, r: 20, l: 50, b: 120 },
+        hovermode: "x unified"
+      };
+
+      Plotly.newPlot("chart3", traces3, layout3, {responsive:true});
     }
 
     loadData();
