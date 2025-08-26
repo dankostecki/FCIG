@@ -24,7 +24,7 @@
       max-width: 1200px;
       width: 100%;
     }
-    #chart1, #chart2, #chart3 { width: 100%; height: 600px; }
+    #chart1, #chart2, #chart3, #chart4 { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
     p { margin: 0 0 20px; color: #6b7280; }
   </style>
@@ -47,20 +47,29 @@
   <!-- Wykres 3 -->
   <div class="card">
     <h2>Historyczne udziały komponentów</h2>
-    <p>Linie pokazują zmiany udziałów komponentów w czasie (wartości bezwzględne → % udziału)</p>
+    <p>Linie pokazują zmiany udziałów komponentów w czasie</p>
     <div id="chart3"></div>
   </div>
 
+  <!-- Wykres 4 -->
+  <div class="card">
+    <h2>Wkłady komponentów w zmianę FCI-G</h2>
+    <p>Wybierz zakres dat poniżej (suwak), aby zobaczyć kto najbardziej wpływał na zacieśnianie / luzowanie</p>
+    <div id="chart4"></div>
+  </div>
+
   <script>
+    let globalData = [];
+    const fciKey = "FCI-G Index (baseline)";
+    const componentKeys = [
+      "FFR", "10Yr Treasury", "Mortgage Rate",
+      "BBB", "Stock Market", "House Prices", "Dollar"
+    ];
+
     async function loadData() {
       const res = await fetch("./data/converted.json");
       const data = await res.json();
-
-      const fciKey = "FCI-G Index (baseline)";
-      const componentKeys = [
-        "FFR", "10Yr Treasury", "Mortgage Rate",
-        "BBB", "Stock Market", "House Prices", "Dollar"
-      ];
+      globalData = data;
 
       // ---------- WYKRES 1 ----------
       const traces1 = componentKeys.map((key) => ({
@@ -82,7 +91,7 @@
 
       const layout1 = {
         barmode: "stack",
-        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        xaxis: { title: "Date", tickangle: -45, automargin: true, rangeslider: {visible: true} },
         yaxis: { title: "Value" },
         legend: { orientation: "h", y: -0.3 },
         margin: { t: 50, r: 20, l: 50, b: 120 },
@@ -138,6 +147,53 @@
       };
 
       Plotly.newPlot("chart3", traces3, layout3, {responsive:true});
+
+      // ---------- WYKRES 4 ----------
+      updateWaterfall(data[0].date, data[data.length-1].date);
+
+      // Obsługa eventu: zmiana zakresu w wykresie 1 -> update waterfall
+      const chart1Div = document.getElementById('chart1');
+      chart1Div.on('plotly_relayout', ev => {
+        if(ev['xaxis.range[0]'] && ev['xaxis.range[1]']) {
+          const startDate = ev['xaxis.range[0]'].substring(0,10);
+          const endDate = ev['xaxis.range[1]'].substring(0,10);
+          updateWaterfall(startDate, endDate);
+        }
+      });
+    }
+
+    function updateWaterfall(startDate, endDate) {
+      const data = globalData;
+      if(!data.length) return;
+
+      const start = data.find(d => d.date >= startDate);
+      const end = [...data].reverse().find(d => d.date <= endDate);
+
+      if(!start || !end) return;
+
+      const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
+
+      const contributions = componentKeys.map(k => {
+        const delta = parseFloat(end[k]) - parseFloat(start[k]);
+        return { component: k, change: delta };
+      });
+
+      const trace = {
+        type: "waterfall",
+        x: contributions.map(c => c.component),
+        y: contributions.map(c => c.change),
+        name: "Contributions",
+        connector: { line: { color: "gray" } }
+      };
+
+      const layout4 = {
+        title: `Wkłady komponentów w Δ FCI-G (${start.date} → ${end.date})`,
+        xaxis: { title: "Component" },
+        yaxis: { title: "Change" },
+        margin: { t: 80, r: 20, l: 50, b: 80 }
+      };
+
+      Plotly.newPlot("chart4", [trace], layout4, {responsive:true});
     }
 
     loadData();
