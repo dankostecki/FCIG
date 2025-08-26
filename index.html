@@ -109,10 +109,10 @@
         });
         contributions.sort((a,b) => b.shareAbs - a.shareAbs);
       } else {
-        // ✅ poprawione sortowanie easing: na górze najbardziej ujemne
+        // 🟢 poprawione sortowanie: najbardziej ujemne (największe luzowanie) na górze
         const easing = contributions
           .filter(c => c.shareDelta < 0)
-          .sort((a,b) => b.shareDelta - a.shareDelta); // np. -150% nad -20%
+          .sort((a,b) => a.shareDelta - b.shareDelta); 
 
         const neutral = contributions.filter(c => c.shareDelta === 0);
 
@@ -123,31 +123,34 @@
         contributions = [...easing, ...neutral, ...tightening];
       }
 
-      const x = mode === "abs" ? contributions.map(c => c.shareAbs) : contributions.map(c => c.shareDelta);
+      let x, labels;
+      if (mode === "abs") {
+        x = contributions.map(c => c.shareAbs);
+        labels = x.map(v => v.toFixed(1) + "%");
+      } else {
+        x = contributions.map(c => c.shareDelta);
+        labels = contributions.map(c => "Δ=" + c.delta.toFixed(3));
+      }
+
       const y = contributions.map(c => c.component);
 
       const colors = contributions.map(c =>
         c.delta > 0 ? "rgba(220,38,38,0.8)" : (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)")
       );
 
-      const textLabels = contributions.map(c => {
-        const val = mode === "abs" ? c.shareAbs : c.shareDelta;
-        return `${val.toFixed(1)}% (Δ=${c.delta.toFixed(3)})`;
-      });
-
       const trace = {
         type: "bar",
         x: x,
         y: y,
         orientation: "h",
-        text: textLabels,
+        text: labels,
         textposition: "outside",
         marker: { color: colors }
       };
 
       Plotly.newPlot("impactChart", [trace], {
         title: `Ranking komponentów (${start.date} → ${end.date}, tryb: ${mode === "abs" ? "udział w |Δ|" : "udział w Δ FCI-G"})`,
-        xaxis: { title: "Udział (%)" },
+        xaxis: { title: mode === "abs" ? "Udział (%)" : "Δ (zmiana wartości)" },
         margin: { t: 80, r: 30, l: 160, b: 60 }
       });
     }
