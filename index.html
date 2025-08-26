@@ -10,10 +10,11 @@
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #eef2ff, #e0f2fe);
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      flex-direction: column;
+      align-items: center;
       min-height: 100vh;
       padding: 20px;
+      gap: 30px;
     }
     .card {
       background: white;
@@ -23,16 +24,24 @@
       max-width: 1200px;
       width: 100%;
     }
-    #chart { width: 100%; height: 700px; }
+    #chart1, #chart2 { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
     p { margin: 0 0 20px; color: #6b7280; }
   </style>
 </head>
 <body>
+  <!-- Wykres 1 -->
   <div class="card">
     <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
     <p>Komponenty jako słupki, suma (FCI-G) jako linia</p>
-    <div id="chart"></div>
+    <div id="chart1"></div>
+  </div>
+
+  <!-- Wykres 2 -->
+  <div class="card">
+    <h2>Procentowy udział komponentów w FCI-G</h2>
+    <p>Udziały liczone względem sumy wartości absolutnych</p>
+    <div id="chart2"></div>
   </div>
 
   <script>
@@ -46,8 +55,8 @@
         "BBB", "Stock Market", "House Prices", "Dollar"
       ];
 
-      // komponenty (stacked bars)
-      const traces = componentKeys.map((key) => ({
+      // ---------- WYKRES 1 ----------
+      const traces1 = componentKeys.map((key) => ({
         x: data.map(d => d.date),
         y: data.map(d => parseFloat(d[key])),
         name: key,
@@ -56,7 +65,6 @@
         marker: { line: { width: 1, color: "#fff" } }
       }));
 
-      // linia FCI-G
       const fciLine = {
         x: data.map(d => d.date),
         y: data.map(d => parseFloat(d[fciKey])),
@@ -65,7 +73,7 @@
         line: { color: "#111827", width: 3 }
       };
 
-      const layout = {
+      const layout1 = {
         barmode: "stack",
         xaxis: { title: "Date", tickangle: -45, automargin: true },
         yaxis: { title: "Value" },
@@ -74,7 +82,37 @@
         hovermode: "x unified"
       };
 
-      Plotly.newPlot("chart", [...traces, fciLine], layout, {responsive:true});
+      Plotly.newPlot("chart1", [...traces1, fciLine], layout1, {responsive:true});
+
+      // ---------- WYKRES 2 ----------
+      // obliczamy udziały procentowe (względem wartości absolutnych)
+      const percentData = data.map(d => {
+        const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
+        const total = values.reduce((a,b) => a+b, 0);
+        const shares = {};
+        componentKeys.forEach((k,i) => {
+          shares[k] = total > 0 ? (values[i] / total * 100) : 0;
+        });
+        return { date: d.date, ...shares };
+      });
+
+      const traces2 = componentKeys.map((key) => ({
+        x: percentData.map(d => d.date),
+        y: percentData.map(d => d[key]),
+        name: key,
+        type: "bar"
+      }));
+
+      const layout2 = {
+        barmode: "stack",
+        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        yaxis: { title: "Share (%)", range: [0,100] },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 50, r: 20, l: 50, b: 120 },
+        hovermode: "x unified"
+      };
+
+      Plotly.newPlot("chart2", traces2, layout2, {responsive:true});
     }
 
     loadData();
