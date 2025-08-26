@@ -40,34 +40,30 @@
       const res = await fetch("./data/converted.json");
       const data = await res.json();
 
-      if (!data || !data.length) {
-        alert("Brak danych w converted.json");
-        return;
-      }
+      const fciKey = "FCI-G Index (baseline)";
+      const componentKeys = [
+        "FFR", "10Yr Treasury", "Mortgage Rate",
+        "BBB", "Stock Market", "House Prices", "Dollar"
+      ];
 
-      // znajdź kolumnę sumy (FCI-G)
-      const allKeys = Object.keys(data[0]);
-      const fciKey = allKeys.find(k => k.toLowerCase().includes("fci"));
-      const keys = allKeys.filter(k => k !== "date" && k !== fciKey);
-
-      const sums = data.map(d => d[fciKey]);
+      const sums = data.map(d => parseFloat(d[fciKey]));
 
       // komponenty jako stacked bars
-      const traces = keys.map((key) => ({
+      const traces = componentKeys.map((key) => ({
         x: data.map(d => d.date),
-        y: data.map(d => (isNaN(d[key]) ? 0 : d[key])),
+        y: data.map(d => parseFloat(d[key])),
         name: key,
         type: "bar",
         opacity: 0.9,
         marker: { line: { width: 1, color: "#fff" } }
       }));
 
-      // dodatkowa seria z tekstem sumy
+      // etykiety sumy nad słupkiem
       const fciLabels = {
         x: data.map(d => d.date),
         y: sums,
         mode: "text",
-        text: sums.map(v => v !== null ? v.toFixed(2) : ""),
+        text: sums.map(v => v.toFixed(2)),
         textposition: "outside",
         showlegend: false,
         type: "scatter",
