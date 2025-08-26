@@ -182,27 +182,20 @@
 
       Plotly.newPlot("chart3", traces3, layout3, {responsive:true});
 
-      // ---------- WYKRES 4 (inicjalny: cały okres) ----------
+      // ---------- WYKRES 4 (inicjalny cały okres) ----------
       updateWaterfall(data[0].date, data[data.length-1].date);
-
-      const chart4Div = document.getElementById('chart4');
-      chart4Div.on('plotly_relayout', ev => {
-        if(ev['xaxis.range[0]'] && ev['xaxis.range[1]']) {
-          const startDate = ev['xaxis.range[0]'].substring(0,10);
-          const endDate = ev['xaxis.range[1]'].substring(0,10);
-          updateWaterfall(startDate, endDate);
-        }
-      });
     }
 
     function updateWaterfall(startDate, endDate) {
       const data = globalData;
-      if(!data.length) return;
+      if (!data.length) return;
 
-      const start = data.find(d => d.date >= startDate);
-      const end = [...data].reverse().find(d => d.date <= endDate);
+      // wybierz dane tylko z tego zakresu
+      const periodData = data.filter(d => d.date >= startDate && d.date <= endDate);
+      if (periodData.length < 2) return;
 
-      if(!start || !end) return;
+      const start = periodData[0];
+      const end = periodData[periodData.length - 1];
 
       const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
 
@@ -223,7 +216,10 @@
 
       const layout4 = {
         title: `Wkłady komponentów w Δ FCI-G (${start.date} → ${end.date})`,
-        xaxis: { title: "Component", rangeslider: { visible: true } }, // suwak tylko tutaj
+        xaxis: { 
+          title: "Component", 
+          rangeslider: { visible: true, bgcolor: "rgba(200,200,200,0.2)" }
+        },
         yaxis: { title: "Change" },
         margin: { t: 80, r: 20, l: 50, b: 80 }
       };
