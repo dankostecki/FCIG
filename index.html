@@ -20,285 +20,46 @@
       border-radius: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       padding: 20px 30px;
-      max-width: 1200px;
+      max-width: 1100px;
       width: 100%;
-      position: relative;
     }
     #chart { width: 100%; height: 700px; }
-    h2 { margin: 0; color: #111827; }
-    p { margin: 0; color: #6b7280; }
-
-    /* Top bar */
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    .time-controls button {
-      background: #fff;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      padding: 6px 12px;
-      margin-left: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 14px;
-    }
-    .time-controls button.active {
-      background: #6366f1;
-      color: white;
-      border-color: #6366f1;
-    }
-
-    /* Drawer */
-    .drawer-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.3);
-      display: none;
-      z-index: 999;
-    }
-    .drawer {
-      position: fixed;
-      top: 0; right: -360px;
-      width: 340px;
-      height: 100%;
-      background: #fff;
-      box-shadow: -2px 0 10px rgba(0,0,0,0.2);
-      transition: right 0.3s ease;
-      padding: 20px;
-      overflow-y: auto;
-      z-index: 1000;
-    }
-    .drawer.open { right: 0; }
-    .drawer-overlay.active { display: block; }
-    .drawer h3 { margin-top: 0; }
-    .drawer section { margin-bottom: 20px; }
-    .drawer input, .drawer select, .drawer button {
-      margin-bottom: 10px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      border: 1px solid #d1d5db;
-      width: 100%;
-    }
-    .drawer button.action {
-      background: #6366f1;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-    }
-    .drawer .custom-series-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-      background: #f9fafb;
-      padding: 6px 8px;
-      border-radius: 6px;
-      margin-bottom: 6px;
-    }
-    .drawer .custom-series-item button {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 2px 6px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    /* Toggle button */
-    .toggle-btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: #6366f1;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
+    h2 { margin: 0 0 10px; color: #111827; }
+    p { margin: 0 0 20px; color: #6b7280; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="top-bar">
-      <div>
-        <h2>Financial Conditions Chart</h2>
-        <p>Interactive chart with custom series</p>
-      </div>
-      <div class="time-controls">
-        <button id="range-all" class="active">All</button>
-        <button id="range-10y">10y</button>
-        <button id="range-5y">5y</button>
-        <button id="range-3y">3y</button>
-      </div>
-    </div>
-
-    <button class="toggle-btn" onclick="openDrawer()">⚙️ Custom Series</button>
+    <h2>Financial Conditions (Stacked Bars)</h2>
+    <p>Skumulowany wykres słupkowy komponentów FCI-G</p>
     <div id="chart"></div>
   </div>
 
-  <!-- Drawer -->
-  <div id="drawer-overlay" class="drawer-overlay" onclick="closeDrawer()"></div>
-  <div id="drawer" class="drawer">
-    <h3>Create Custom Series</h3>
-    <section>
-      <select id="col1"></select>
-      <select id="operation">
-        <option value="+">+</option>
-        <option value="-">-</option>
-        <option value="*">×</option>
-        <option value="/">÷</option>
-      </select>
-      <select id="col2"></select>
-      <input id="seriesName" type="text" placeholder="Series name" />
-      <label>Line color: <input type="color" id="seriesColor" value="#ff0000" /></label>
-      <label>Line style:
-        <select id="seriesStyle">
-          <option value="solid">Solid</option>
-          <option value="dash">Dashed</option>
-          <option value="dot">Dotted</option>
-        </select>
-      </label>
-      <button class="action" onclick="addCustomSeries()">➕ Add Series</button>
-    </section>
-    <h4>Custom Series List</h4>
-    <div id="custom-series-list"></div>
-  </div>
-
   <script>
-    let fullData = [];
-    let keys = [];
-    let currentYears = null;
-    let customSeries = [];
-
-    const layout = {
-      title: "FCI-G Components",
-      xaxis: { title: "Date", rangeslider: { visible: true } },
-      yaxis: { title: "Value" },
-      legend: { orientation: "h" },
-      margin: { t: 50, r: 20, l: 50, b: 100 }
-    };
-
-    function filterByYears(years) {
-      if (!years) return fullData;
-      const cutoff = new Date();
-      cutoff.setFullYear(cutoff.getFullYear() - years);
-      return fullData.filter(d => new Date(d.date) >= cutoff);
-    }
-
     async function loadData() {
       const res = await fetch("./data/converted.json");
-      fullData = await res.json();
-      keys = Object.keys(fullData[0]).filter(k => k !== "date");
+      const data = await res.json();
 
-      // populate dropdowns
-      const col1 = document.getElementById("col1");
-      const col2 = document.getElementById("col2");
-      keys.forEach(k => {
-        col1.innerHTML += `<option value="${k}">${k}</option>`;
-        col2.innerHTML += `<option value="${k}">${k}</option>`;
-      });
+      const keys = Object.keys(data[0]).filter(k => k !== "date");
 
-      updateChart();
-    }
-
-    function updateChart() {
-      const filtered = filterByYears(currentYears);
-      let traces = keys.map(k => ({
-        x: filtered.map(d => d.date),
-        y: filtered.map(d => d[k]),
-        mode: "lines",
-        name: k,
-        line: { width: 2 }
+      // Tworzymy ścieżki jako stacked bar
+      const traces = keys.map((key, i) => ({
+        x: data.map(d => d.date),
+        y: data.map(d => d[key]),
+        name: key,
+        type: "bar"
       }));
 
-      customSeries.forEach(s => {
-        if (!s.hidden) {
-          traces.push({
-            x: filtered.map(d => d.date),
-            y: s.fn(filtered),
-            mode: "lines",
-            name: s.name,
-            line: {
-              color: s.color,
-              dash: s.style,
-              width: 2
-            }
-          });
-        }
-      });
-
-      Plotly.react("chart", traces, layout);
-    }
-
-    function addCustomSeries() {
-      const col1 = document.getElementById("col1").value;
-      const op = document.getElementById("operation").value;
-      const col2 = document.getElementById("col2").value;
-      const name = document.getElementById("seriesName").value || `${col1} ${op} ${col2}`;
-      const color = document.getElementById("seriesColor").value;
-      const style = document.getElementById("seriesStyle").value;
-
-      const fn = (data) => data.map(d => {
-        const a = d[col1] || 0;
-        const b = d[col2] || 0;
-        switch(op) {
-          case "+": return a + b;
-          case "-": return a - b;
-          case "*": return a * b;
-          case "/": return b !== 0 ? a / b : null;
-        }
-      });
-
-      customSeries.push({ name, fn, color, style });
-
-      const list = document.getElementById("custom-series-list");
-      const div = document.createElement("div");
-      div.className = "custom-series-item";
-      div.innerHTML = `${name} <button onclick="removeCustomSeries('${name}')">❌</button>`;
-      list.appendChild(div);
-
-      updateChart();
-    }
-
-    function removeCustomSeries(name) {
-      customSeries = customSeries.filter(s => s.name !== name);
-      const list = document.getElementById("custom-series-list");
-      list.innerHTML = "";
-      customSeries.forEach(s => {
-        const div = document.createElement("div");
-        div.className = "custom-series-item";
-        div.innerHTML = `${s.name} <button onclick="removeCustomSeries('${s.name}')">❌</button>`;
-        list.appendChild(div);
-      });
-      updateChart();
-    }
-
-    // Drawer controls
-    function openDrawer() {
-      document.getElementById("drawer").classList.add("open");
-      document.getElementById("drawer-overlay").classList.add("active");
-    }
-    function closeDrawer() {
-      document.getElementById("drawer").classList.remove("open");
-      document.getElementById("drawer-overlay").classList.remove("active");
-    }
-
-    // range buttons
-    [["all",null],["10y",10],["5y",5],["3y",3]].forEach(([id,years]) => {
-      document.getElementById("range-"+id).onclick = () => {
-        currentYears = years;
-        document.querySelectorAll(".time-controls button").forEach(b=>b.classList.remove("active"));
-        document.getElementById("range-"+id).classList.add("active");
-        updateChart();
+      const layout = {
+        barmode: "stack",
+        xaxis: { title: "Date" },
+        yaxis: { title: "Value" },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 50, r: 20, l: 50, b: 100 }
       };
-    });
+
+      Plotly.newPlot("chart", traces, layout, {responsive:true});
+    }
 
     loadData();
   </script>
