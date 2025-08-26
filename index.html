@@ -20,7 +20,7 @@
       border-radius: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.1);
       padding: 20px 30px;
-      max-width: 1100px;
+      max-width: 1200px;
       width: 100%;
     }
     #chart { width: 100%; height: 700px; }
@@ -31,7 +31,7 @@
 <body>
   <div class="card">
     <h2>Financial Conditions (Stacked Bars)</h2>
-    <p>Skumulowany wykres słupkowy komponentów FCI-G</p>
+    <p>Każdy słupek przedstawia komponenty FCI-G, a suma = FCI-G Index</p>
     <div id="chart"></div>
   </div>
 
@@ -40,25 +40,43 @@
       const res = await fetch("./data/converted.json");
       const data = await res.json();
 
-      const keys = Object.keys(data[0]).filter(k => k !== "date");
+      // kolumny = wszystkie poza datą i indeksem bazowym
+      const keys = Object.keys(data[0]).filter(k => k !== "date" && k !== "FCI-G Index (baseline)");
 
-      // Tworzymy ścieżki jako stacked bar
-      const traces = keys.map((key, i) => ({
+      // suma = kolumna indeksu
+      const sums = data.map(d => d["FCI-G Index (baseline)"]);
+
+      // komponenty jako stacked bars
+      const traces = keys.map((key) => ({
         x: data.map(d => d.date),
         y: data.map(d => d[key]),
         name: key,
-        type: "bar"
+        type: "bar",
+        opacity: 0.9,
+        marker: { line: { width: 1, color: "#ffffff" } }
       }));
+
+      // dodatkowa "niewidoczna" seria z tekstem sumy
+      const fciLabels = {
+        x: data.map(d => d.date),
+        y: sums,
+        mode: "text",
+        text: sums.map(v => v.toFixed(2)),
+        textposition: "outside",
+        showlegend: false,
+        type: "scatter",
+        textfont: { color: "#111827", size: 12 }
+      };
 
       const layout = {
         barmode: "stack",
-        xaxis: { title: "Date" },
+        xaxis: { title: "Date", tickangle: -45 },
         yaxis: { title: "Value" },
-        legend: { orientation: "h", y: -0.3 },
-        margin: { t: 50, r: 20, l: 50, b: 100 }
+        legend: { orientation: "h", y: -0.4 },
+        margin: { t: 50, r: 20, l: 50, b: 150 }
       };
 
-      Plotly.newPlot("chart", traces, layout, {responsive:true});
+      Plotly.newPlot("chart", [...traces, fciLabels], layout, {responsive:true});
     }
 
     loadData();
