@@ -31,7 +31,7 @@
 <body>
   <div class="card">
     <h2>Financial Conditions (Stacked Bars)</h2>
-    <p>Każdy słupek przedstawia komponenty FCI-G, a suma = FCI-G Index</p>
+    <p>Każdy słupek = komponenty FCI-G, suma = FCI-G Index</p>
     <div id="chart"></div>
   </div>
 
@@ -40,40 +40,48 @@
       const res = await fetch("./data/converted.json");
       const data = await res.json();
 
-      // kolumny = wszystkie poza datą i indeksem bazowym
-      const keys = Object.keys(data[0]).filter(k => k !== "date" && k !== "FCI-G Index (baseline)");
+      if (!data || !data.length) {
+        alert("Brak danych w converted.json");
+        return;
+      }
 
-      // suma = kolumna indeksu
-      const sums = data.map(d => d["FCI-G Index (baseline)"]);
+      // znajdź kolumnę sumy (FCI-G)
+      const allKeys = Object.keys(data[0]);
+      const fciKey = allKeys.find(k => k.toLowerCase().includes("fci"));
+      const keys = allKeys.filter(k => k !== "date" && k !== fciKey);
+
+      const sums = data.map(d => d[fciKey]);
 
       // komponenty jako stacked bars
       const traces = keys.map((key) => ({
         x: data.map(d => d.date),
-        y: data.map(d => d[key]),
+        y: data.map(d => (isNaN(d[key]) ? 0 : d[key])),
         name: key,
         type: "bar",
         opacity: 0.9,
-        marker: { line: { width: 1, color: "#ffffff" } }
+        marker: { line: { width: 1, color: "#fff" } }
       }));
 
-      // dodatkowa "niewidoczna" seria z tekstem sumy
+      // dodatkowa seria z tekstem sumy
       const fciLabels = {
         x: data.map(d => d.date),
         y: sums,
         mode: "text",
-        text: sums.map(v => v.toFixed(2)),
+        text: sums.map(v => v !== null ? v.toFixed(2) : ""),
         textposition: "outside",
         showlegend: false,
         type: "scatter",
-        textfont: { color: "#111827", size: 12 }
+        textfont: { color: "#111827", size: 12 },
+        hoverinfo: "skip"
       };
 
       const layout = {
         barmode: "stack",
-        xaxis: { title: "Date", tickangle: -45 },
+        xaxis: { title: "Date", tickangle: -45, automargin: true },
         yaxis: { title: "Value" },
         legend: { orientation: "h", y: -0.4 },
-        margin: { t: 50, r: 20, l: 50, b: 150 }
+        margin: { t: 50, r: 20, l: 50, b: 150 },
+        hovermode: "x unified"
       };
 
       Plotly.newPlot("chart", [...traces, fciLabels], layout, {responsive:true});
