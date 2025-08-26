@@ -24,17 +24,14 @@
       max-width: 1200px;
       width: 100%;
     }
-    #chart1, #chart1b, #chart2, #chart3 { width: 100%; height: 600px; }
+    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
     p { margin: 0 0 20px; color: #6b7280; }
 
     .summary-section {
       margin-top: 20px;
     }
-    .summary-section h3 {
-      margin-bottom: 10px;
-      color: #374151;
-    }
+    .summary-section h3 { margin-bottom: 10px; color: #374151; }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -52,13 +49,9 @@
     .tightening { background: linear-gradient(135deg, #dc2626, #ef4444); }
     .easing { background: linear-gradient(135deg, #059669, #10b981); }
     .neutral { background: linear-gradient(135deg, #6b7280, #9ca3af); }
-    .summary-card h4 {
-      margin: 0;
-      font-size: 16px;
-    }
-    .summary-card span {
-      font-size: 14px;
-    }
+    .summary-card h4 { margin: 0; font-size: 16px; }
+    .summary-card span { font-size: 14px; }
+
     .legend {
       margin-top: 20px;
       font-size: 14px;
@@ -69,77 +62,104 @@
       border: 1px solid #e5e7eb;
     }
     .legend ul { margin: 6px 0 0 18px; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: center;
+    }
+    .controls input, .controls button {
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #f9fafb;
+      cursor: pointer;
+    }
+    .controls button:hover { background: #e5e7eb; }
   </style>
 </head>
 <body>
-  <!-- Wykres 1 -->
+  <!-- Wykresy główne -->
   <div class="card">
     <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
-    <p>Komponenty jako słupki, suma (FCI-G) jako linia</p>
     <div id="chart1"></div>
   </div>
 
-  <!-- Wykres 1b -->
   <div class="card">
     <h2>Komponenty i FCI-G (linie)</h2>
-    <p>Wszystkie komponenty + FCI-G jako linie na jednej osi</p>
     <div id="chart1b"></div>
   </div>
 
-  <!-- Wykres 2 -->
   <div class="card">
     <h2>Procentowy udział komponentów w FCI-G</h2>
-    <p>Udziały liczone względem sumy wartości absolutnych (suma = 100%)</p>
     <div id="chart2"></div>
   </div>
 
-  <!-- Wykres 3 -->
   <div class="card">
     <h2>Historyczne udziały komponentów</h2>
-    <p>Linie pokazują zmiany udziałów komponentów w czasie</p>
     <div id="chart3"></div>
   </div>
 
   <!-- Podsumowanie -->
   <div class="card">
     <h2>Podsumowanie zmian</h2>
-    <p>Które komponenty luzowały, a które zacieśniały warunki finansowe</p>
-
     <div class="summary-section">
       <h3>m/m (ostatni miesiąc)</h3>
       <div class="summary-grid" id="summary-mm"></div>
     </div>
-
     <div class="summary-section">
       <h3>r/r (ostatni rok)</h3>
       <div class="summary-grid" id="summary-yy"></div>
     </div>
-
     <div class="legend">
       <strong>Legenda:</strong>
       <ul>
-        <li><span style="color:#dc2626;font-weight:bold;">Czerwone</span> – komponenty zacieśniające warunki (Δ > 0)</li>
-        <li><span style="color:#059669;font-weight:bold;">Zielone</span> – komponenty luzujące warunki (Δ < 0)</li>
-        <li><span style="color:#6b7280;font-weight:bold;">Szare</span> – neutralne (brak zmiany)</li>
+        <li><span style="color:#dc2626;font-weight:bold;">Czerwone</span> – komponenty zacieśniające (Δ > 0)</li>
+        <li><span style="color:#059669;font-weight:bold;">Zielone</span> – komponenty luzujące (Δ < 0)</li>
+        <li><span style="color:#6b7280;font-weight:bold;">Szare</span> – neutralne</li>
       </ul>
-      <p><strong>Udział w Δ FCI-G</strong>: wkład komponentu w zmianę indeksu (w tym samym kierunku co Δ FCI-G).<br>
-      <strong>Udział w sumie absolutnych zmian</strong>: stabilny wskaźnik, pokazuje jak duży był wkład komponentu w ogólny „ruch” niezależnie od kierunku. Suma = 100%.</p>
+      <p><strong>Udział w Δ FCI-G</strong>: pokazuje kto napędzał zmianę indeksu.<br>
+         <strong>Udział w |Δ|</strong>: pokazuje wagę ruchu (suma = 100%).</p>
     </div>
+  </div>
+
+  <!-- Analiza wkładów -->
+  <div class="card">
+    <h2>Analiza wkładów w Δ FCI-G (ranking)</h2>
+    <div class="controls">
+      <label>Od: <input type="date" id="startDate"></label>
+      <label>Do: <input type="date" id="endDate"></label>
+      <button onclick="quickRange(1)">1Y</button>
+      <button onclick="quickRange(3)">3Y</button>
+      <button onclick="quickRange(5)">5Y</button>
+      <button onclick="quickRange('all')">All</button>
+      <button onclick="applyRange()">Zastosuj</button>
+    </div>
+    <div id="impactChart"></div>
   </div>
 
   <script>
     let globalData = [];
     const fciKey = "FCI-G Index (baseline)";
-    const componentKeys = [
-      "FFR", "10Yr Treasury", "Mortgage Rate",
-      "BBB", "Stock Market", "House Prices", "Dollar"
-    ];
+    const componentKeys = ["FFR", "10Yr Treasury", "Mortgage Rate", "BBB", "Stock Market", "House Prices", "Dollar"];
 
     async function loadData() {
       const res = await fetch("./data/converted.json");
       const data = await res.json();
       globalData = data;
 
+      // Ustaw domyślne daty w kontrolkach
+      document.getElementById("startDate").value = data[0].date;
+      document.getElementById("endDate").value = data[data.length-1].date;
+
+      drawCharts(data);
+      updateSummary();
+      updateImpact(data[0].date, data[data.length-1].date);
+    }
+
+    function drawCharts(data) {
       // Chart 1
       const traces1 = componentKeys.map((key) => ({
         x: data.map(d => d.date),
@@ -157,10 +177,10 @@
       };
       Plotly.newPlot("chart1", [...traces1, fciLine], {
         barmode: "stack",
-        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        xaxis: { tickangle: -45, automargin: true },
         yaxis: { title: "Value" },
         legend: { orientation: "h", y: -0.3 },
-        margin: { t: 50, r: 20, l: 50, b: 120 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
         hovermode: "x unified"
       });
 
@@ -179,10 +199,10 @@
         line: { color: "#111827", width: 3 }
       };
       Plotly.newPlot("chart1b", [...traces1b, fciLine2], {
-        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        xaxis: { tickangle: -45, automargin: true },
         yaxis: { title: "Value" },
         legend: { orientation: "h", y: -0.3 },
-        margin: { t: 50, r: 20, l: 50, b: 120 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
         hovermode: "x unified"
       });
 
@@ -204,10 +224,10 @@
       }));
       Plotly.newPlot("chart2", traces2, {
         barmode: "stack",
-        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        xaxis: { tickangle: -45, automargin: true },
         yaxis: { title: "Share (%)", range: [0,100] },
         legend: { orientation: "h", y: -0.3 },
-        margin: { t: 50, r: 20, l: 50, b: 120 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
         hovermode: "x unified"
       });
 
@@ -219,21 +239,17 @@
         name: key
       }));
       Plotly.newPlot("chart3", traces3, {
-        xaxis: { title: "Date", tickangle: -45, automargin: true },
+        xaxis: { tickangle: -45, automargin: true },
         yaxis: { title: "Share (%)", range: [0,100] },
         legend: { orientation: "h", y: -0.3 },
-        margin: { t: 50, r: 20, l: 50, b: 120 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
         hovermode: "x unified"
       });
-
-      // Summary
-      updateSummary();
     }
 
     function updateSummary() {
       const data = globalData;
       if (data.length < 13) return;
-
       const end = data[data.length-1];
       const prevMonth = data[data.length-2];
       const prevYear = data[data.length-13];
@@ -269,16 +285,77 @@
       data.forEach(row => {
         const div = document.createElement("div");
         div.classList.add("summary-card");
-        div.classList.add(row.direction === "tightening" ? "tightening" : (row.direction === "easing" ? "easing" : "neutral"));
+        div.classList.add(row.direction);
         div.innerHTML = `
           <h4>${row.component}</h4>
           <span>Zmiana: ${row.change}</span>
           <span>Udział w Δ FCI-G: ${row.shareFCI}</span>
-          <span>Udział w sumie |Δ|: ${row.shareAbs}</span>
+          <span>Udział w |Δ|: ${row.shareAbs}</span>
           <span>${row.direction === "tightening" ? "Zacieśniało" : (row.direction === "easing" ? "Luzowało" : "Neutralne")}</span>
         `;
         container.appendChild(div);
       });
+    }
+
+    // --- Nowy wykres "Analiza wkładów"
+    function updateImpact(startDate, endDate) {
+      const data = globalData.filter(d => d.date >= startDate && d.date <= endDate);
+      if (data.length < 2) return;
+
+      const start = data[0];
+      const end = data[data.length-1];
+      const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
+
+      let contributions = componentKeys.map(k => {
+        const delta = parseFloat(end[k]) - parseFloat(start[k]);
+        const share = fciChange !== 0 ? (delta / fciChange * 100) : 0;
+        return { component: k, share, delta };
+      });
+
+      contributions.sort((a,b) => Math.abs(b.share) - Math.abs(a.share));
+
+      const colors = contributions.map(c =>
+        c.delta > 0 ? "rgba(220,38,38,0.8)" : (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)")
+      );
+
+      const trace = {
+        type: "bar",
+        x: contributions.map(c => c.share),
+        y: contributions.map(c => c.component),
+        orientation: "h",
+        text: contributions.map(c => `${c.share.toFixed(1)}%`),
+        textposition: "outside",
+        marker: { color: colors }
+      };
+
+      Plotly.newPlot("impactChart", [trace], {
+        title: `Ranking wpływu komponentów na Δ FCI-G (${start.date} → ${end.date})`,
+        xaxis: { title: "Udział w Δ FCI-G (%)" },
+        margin: { t: 60, r: 30, l: 120, b: 60 }
+      });
+    }
+
+    function quickRange(years) {
+      const data = globalData;
+      if (!data.length) return;
+      if (years === "all") {
+        document.getElementById("startDate").value = data[0].date;
+        document.getElementById("endDate").value = data[data.length-1].date;
+      } else {
+        const end = new Date(data[data.length-1].date);
+        const start = new Date(end);
+        start.setFullYear(start.getFullYear() - years);
+        const startDate = data.find(d => new Date(d.date) >= start);
+        document.getElementById("startDate").value = startDate ? startDate.date : data[0].date;
+        document.getElementById("endDate").value = data[data.length-1].date;
+      }
+      applyRange();
+    }
+
+    function applyRange() {
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      updateImpact(startDate, endDate);
     }
 
     loadData();
