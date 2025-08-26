@@ -37,7 +37,7 @@
     }
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 15px;
     }
     .summary-card {
@@ -59,6 +59,16 @@
     .summary-card span {
       font-size: 14px;
     }
+    .legend {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #374151;
+      background: #f9fafb;
+      padding: 10px 15px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    .legend ul { margin: 6px 0 0 18px; }
   </style>
 </head>
 <body>
@@ -104,6 +114,17 @@
       <h3>r/r (ostatni rok)</h3>
       <div class="summary-grid" id="summary-yy"></div>
     </div>
+
+    <div class="legend">
+      <strong>Legenda:</strong>
+      <ul>
+        <li><span style="color:#dc2626;font-weight:bold;">Czerwone</span> – komponenty zacieśniające warunki (Δ > 0)</li>
+        <li><span style="color:#059669;font-weight:bold;">Zielone</span> – komponenty luzujące warunki (Δ < 0)</li>
+        <li><span style="color:#6b7280;font-weight:bold;">Szare</span> – neutralne (brak zmiany)</li>
+      </ul>
+      <p><strong>Udział w Δ FCI-G</strong>: wkład komponentu w zmianę indeksu (w tym samym kierunku co Δ FCI-G).<br>
+      <strong>Udział w sumie absolutnych zmian</strong>: stabilny wskaźnik, pokazuje jak duży był wkład komponentu w ogólny „ruch” niezależnie od kierunku. Suma = 100%.</p>
+    </div>
   </div>
 
   <script>
@@ -119,7 +140,7 @@
       const data = await res.json();
       globalData = data;
 
-      // ---------- WYKRES 1 ----------
+      // Chart 1
       const traces1 = componentKeys.map((key) => ({
         x: data.map(d => d.date),
         y: data.map(d => parseFloat(d[key])),
@@ -143,7 +164,7 @@
         hovermode: "x unified"
       });
 
-      // ---------- WYKRES 1b ----------
+      // Chart 1b
       const traces1b = componentKeys.map((key) => ({
         x: data.map(d => d.date),
         y: data.map(d => parseFloat(d[key])),
@@ -165,7 +186,7 @@
         hovermode: "x unified"
       });
 
-      // ---------- WYKRES 2 ----------
+      // Chart 2
       const percentData = data.map(d => {
         const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
         const total = values.reduce((a,b) => a+b, 0);
@@ -190,7 +211,7 @@
         hovermode: "x unified"
       });
 
-      // ---------- WYKRES 3 ----------
+      // Chart 3
       const traces3 = componentKeys.map((key) => ({
         x: percentData.map(d => d.date),
         y: percentData.map(d => d[key]),
@@ -205,13 +226,13 @@
         hovermode: "x unified"
       });
 
-      // ---------- PODSUMOWANIE ----------
+      // Summary
       updateSummary();
     }
 
     function updateSummary() {
       const data = globalData;
-      if (data.length < 13) return; // potrzebujemy co najmniej roku danych
+      if (data.length < 13) return;
 
       const end = data[data.length-1];
       const prevMonth = data[data.length-2];
@@ -219,23 +240,27 @@
 
       const calcChanges = (start, end) => {
         const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
-        return componentKeys.map(k => {
-          const delta = parseFloat(end[k]) - parseFloat(start[k]);
-          const share = fciChange !== 0 ? (delta / fciChange * 100) : 0;
+        const deltas = componentKeys.map(k => ({
+          component: k,
+          delta: parseFloat(end[k]) - parseFloat(start[k])
+        }));
+        const totalAbs = deltas.reduce((a,b) => a + Math.abs(b.delta), 0);
+
+        return deltas.map(d => {
+          const shareFCI = fciChange !== 0 ? (d.delta / fciChange * 100) : 0;
+          const shareAbs = totalAbs !== 0 ? (Math.abs(d.delta) / totalAbs * 100) : 0;
           return {
-            component: k,
-            change: delta.toFixed(3),
-            share: share.toFixed(1) + "%",
-            direction: delta > 0 ? "tightening" : (delta < 0 ? "easing" : "neutral")
+            component: d.component,
+            change: d.delta.toFixed(3),
+            shareFCI: shareFCI.toFixed(1) + "%",
+            shareAbs: shareAbs.toFixed(1) + "%",
+            direction: d.delta > 0 ? "tightening" : (d.delta < 0 ? "easing" : "neutral")
           };
-        });
+        }).sort((a,b) => parseFloat(b.shareAbs) - parseFloat(a.shareAbs));
       };
 
-      const mm = calcChanges(prevMonth, end);
-      const yy = calcChanges(prevYear, end);
-
-      renderCards("summary-mm", mm);
-      renderCards("summary-yy", yy);
+      renderCards("summary-mm", calcChanges(prevMonth, end));
+      renderCards("summary-yy", calcChanges(prevYear, end));
     }
 
     function renderCards(containerId, data) {
@@ -248,7 +273,8 @@
         div.innerHTML = `
           <h4>${row.component}</h4>
           <span>Zmiana: ${row.change}</span>
-          <span>Udział: ${row.share}</span>
+          <span>Udział w Δ FCI-G: ${row.shareFCI}</span>
+          <span>Udział w sumie |Δ|: ${row.shareAbs}</span>
           <span>${row.direction === "tightening" ? "Zacieśniało" : (row.direction === "easing" ? "Luzowało" : "Neutralne")}</span>
         `;
         container.appendChild(div);
