@@ -24,8 +24,31 @@
       max-width: 1200px;
       width: 100%;
     }
-    #impactChart { width: 100%; height: 600px; }
+    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
+    p { margin: 0 0 20px; color: #6b7280; }
+
+    .summary-section { margin-top: 20px; }
+    .summary-section h3 { margin-bottom: 10px; color: #374151; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 15px;
+    }
+    .summary-card {
+      border-radius: 12px;
+      padding: 15px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .tightening { background: linear-gradient(135deg, #dc2626, #ef4444); }
+    .easing { background: linear-gradient(135deg, #059669, #10b981); }
+    .neutral { background: linear-gradient(135deg, #6b7280, #9ca3af); }
+    .summary-card h4 { margin: 0; font-size: 16px; }
+    .summary-card span { font-size: 14px; }
 
     .controls {
       display: flex;
@@ -50,6 +73,40 @@
   </style>
 </head>
 <body>
+  <!-- Wykresy główne -->
+  <div class="card">
+    <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
+    <div id="chart1"></div>
+  </div>
+
+  <div class="card">
+    <h2>Komponenty i FCI-G (linie)</h2>
+    <div id="chart1b"></div>
+  </div>
+
+  <div class="card">
+    <h2>Procentowy udział komponentów w FCI-G</h2>
+    <div id="chart2"></div>
+  </div>
+
+  <div class="card">
+    <h2>Historyczne udziały komponentów</h2>
+    <div id="chart3"></div>
+  </div>
+
+  <!-- Podsumowanie -->
+  <div class="card">
+    <h2>Podsumowanie zmian</h2>
+    <div class="summary-section">
+      <h3>m/m (ostatni miesiąc)</h3>
+      <div class="summary-grid" id="summary-mm"></div>
+    </div>
+    <div class="summary-section">
+      <h3>r/r (ostatni rok)</h3>
+      <div class="summary-grid" id="summary-yy"></div>
+    </div>
+  </div>
+
   <!-- Analiza wkładów -->
   <div class="card">
     <h2>Analiza wkładów w Δ FCI-G (ranking)</h2>
@@ -85,9 +142,149 @@
       document.getElementById("startDate").value = data[0].date;
       document.getElementById("endDate").value = data[data.length-1].date;
 
+      drawCharts(data);
+      updateSummary();
       updateImpact(data[0].date, data[data.length-1].date, "delta");
     }
 
+    function drawCharts(data) {
+      // Chart 1
+      const traces1 = componentKeys.map((key) => ({
+        x: data.map(d => d.date),
+        y: data.map(d => parseFloat(d[key])),
+        name: key,
+        type: "bar",
+        opacity: 0.9
+      }));
+      const fciLine = {
+        x: data.map(d => d.date),
+        y: data.map(d => parseFloat(d[fciKey])),
+        mode: "lines",
+        name: "FCI-G Index (baseline)",
+        line: { color: "#111827", width: 3 }
+      };
+      Plotly.newPlot("chart1", [...traces1, fciLine], {
+        barmode: "stack",
+        xaxis: { tickangle: -45, automargin: true },
+        yaxis: { title: "Value" },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
+        hovermode: "x unified"
+      });
+
+      // Chart 1b
+      const traces1b = componentKeys.map((key) => ({
+        x: data.map(d => d.date),
+        y: data.map(d => parseFloat(d[key])),
+        mode: "lines",
+        name: key
+      }));
+      const fciLine2 = {
+        x: data.map(d => d.date),
+        y: data.map(d => parseFloat(d[fciKey])),
+        mode: "lines",
+        name: "FCI-G Index (baseline)",
+        line: { color: "#111827", width: 3 }
+      };
+      Plotly.newPlot("chart1b", [...traces1b, fciLine2], {
+        xaxis: { tickangle: -45, automargin: true },
+        yaxis: { title: "Value" },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
+        hovermode: "x unified"
+      });
+
+      // Chart 2
+      const percentData = data.map(d => {
+        const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
+        const total = values.reduce((a,b) => a+b, 0);
+        const shares = {};
+        componentKeys.forEach((k,i) => {
+          shares[k] = total > 0 ? (values[i] / total * 100) : 0;
+        });
+        return { date: d.date, ...shares };
+      });
+      const traces2 = componentKeys.map((key) => ({
+        x: percentData.map(d => d.date),
+        y: percentData.map(d => d[key]),
+        name: key,
+        type: "bar"
+      }));
+      Plotly.newPlot("chart2", traces2, {
+        barmode: "stack",
+        xaxis: { tickangle: -45, automargin: true },
+        yaxis: { title: "Share (%)", range: [0,100] },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
+        hovermode: "x unified"
+      });
+
+      // Chart 3
+      const traces3 = componentKeys.map((key) => ({
+        x: percentData.map(d => d.date),
+        y: percentData.map(d => d[key]),
+        mode: "lines",
+        name: key
+      }));
+      Plotly.newPlot("chart3", traces3, {
+        xaxis: { tickangle: -45, automargin: true },
+        yaxis: { title: "Share (%)", range: [0,100] },
+        legend: { orientation: "h", y: -0.3 },
+        margin: { t: 40, r: 20, l: 50, b: 100 },
+        hovermode: "x unified"
+      });
+    }
+
+    function updateSummary() {
+      const data = globalData;
+      if (data.length < 13) return;
+      const end = data[data.length-1];
+      const prevMonth = data[data.length-2];
+      const prevYear = data[data.length-13];
+
+      const calcChanges = (start, end) => {
+        const fciChange = parseFloat(end[fciKey]) - parseFloat(start[fciKey]);
+        const deltas = componentKeys.map(k => ({
+          component: k,
+          delta: parseFloat(end[k]) - parseFloat(start[k])
+        }));
+        const totalAbs = deltas.reduce((a,b) => a + Math.abs(b.delta), 0);
+
+        return deltas.map(d => {
+          const shareFCI = fciChange !== 0 ? (d.delta / fciChange * 100) : 0;
+          const shareAbs = totalAbs !== 0 ? (Math.abs(d.delta) / totalAbs * 100) : 0;
+          return {
+            component: d.component,
+            change: d.delta.toFixed(3),
+            shareFCI: shareFCI.toFixed(1) + "%",
+            shareAbs: shareAbs.toFixed(1) + "%",
+            direction: d.delta > 0 ? "tightening" : (d.delta < 0 ? "easing" : "neutral")
+          };
+        }).sort((a,b) => parseFloat(b.shareAbs) - parseFloat(a.shareAbs));
+      };
+
+      renderCards("summary-mm", calcChanges(prevMonth, end));
+      renderCards("summary-yy", calcChanges(prevYear, end));
+    }
+
+    function renderCards(containerId, data) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.classList.add("summary-card");
+        div.classList.add(row.direction);
+        div.innerHTML = `
+          <h4>${row.component}</h4>
+          <span>Zmiana: ${row.change}</span>
+          <span>Udział w Δ FCI-G: ${row.shareFCI}</span>
+          <span>Udział w |Δ|: ${row.shareAbs}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // --- Ranking
     function updateImpact(startDate, endDate, mode) {
       const data = globalData.filter(d => d.date >= startDate && d.date <= endDate);
       if (data.length < 2) return;
@@ -109,16 +306,16 @@
         });
         contributions.sort((a,b) => b.shareAbs - a.shareAbs);
       } else {
-        // 🟢 poprawione sortowanie: najbardziej ujemne (największe luzowanie) na górze
+        // 🟢 poprawione: najbardziej ujemne na górze
         const easing = contributions
           .filter(c => c.shareDelta < 0)
-          .sort((a,b) => a.shareDelta - b.shareDelta); 
+          .sort((a,b) => a.shareDelta - b.shareDelta);
 
         const neutral = contributions.filter(c => c.shareDelta === 0);
 
         const tightening = contributions
           .filter(c => c.shareDelta > 0)
-          .sort((a,b) => b.shareDelta - a.shareDelta); // największe czerwone na dole
+          .sort((a,b) => b.shareDelta - a.shareDelta);
 
         contributions = [...easing, ...neutral, ...tightening];
       }
@@ -129,7 +326,7 @@
         labels = x.map(v => v.toFixed(1) + "%");
       } else {
         x = contributions.map(c => c.shareDelta);
-        labels = contributions.map(c => "Δ=" + c.delta.toFixed(3));
+        labels = x.map(v => v.toFixed(1) + "%");
       }
 
       const y = contributions.map(c => c.component);
@@ -150,7 +347,7 @@
 
       Plotly.newPlot("impactChart", [trace], {
         title: `Ranking komponentów (${start.date} → ${end.date}, tryb: ${mode === "abs" ? "udział w |Δ|" : "udział w Δ FCI-G"})`,
-        xaxis: { title: mode === "abs" ? "Udział (%)" : "Δ (zmiana wartości)" },
+        xaxis: { title: "Udział (%)" },
         margin: { t: 80, r: 30, l: 160, b: 60 }
       });
     }
@@ -165,7 +362,7 @@
         document.getElementById("endDate").value = endDate;
       } else if (years === "ytd") {
         const end = new Date(endDate);
-        const start = new Date(end.getFullYear(), 0, 1); // 1 Jan
+        const start = new Date(end.getFullYear(), 0, 1);
         const startDate = data.find(d => new Date(d.date) >= start);
         document.getElementById("startDate").value = startDate ? startDate.date : data[0].date;
         document.getElementById("endDate").value = endDate;
