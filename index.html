@@ -70,6 +70,17 @@
       gap: 10px;
       align-items: center;
     }
+
+    .legend {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #374151;
+      background: #f9fafb;
+      padding: 10px 15px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    .legend ul { margin: 6px 0 0 18px; }
   </style>
 </head>
 <body>
@@ -124,9 +135,19 @@
       <select id="modeSelect" onchange="applyRange()">
         <option value="delta">Udział w Δ FCI-G</option>
         <option value="abs">Udział w |Δ|</option>
+        <option value="weighted">Ważona zmiana</option>
       </select>
     </div>
     <div id="impactChart"></div>
+
+    <div class="legend">
+      <strong>Legenda trybów:</strong>
+      <ul>
+        <li><b>Udział w Δ FCI-G</b> – kto najbardziej ciągnął indeks w górę lub dół w wybranym okresie (udział względny, może być >100% lub <0%).</li>
+        <li><b>Udział w |Δ|</b> – kto miał największe zmiany względem innych (udziały sumują się do 100%).</li>
+        <li><b>Ważona zmiana</b> – suma miesięcznych (udział w FCI-G × zmiana komponentu) w wybranym okresie; pokazuje wpływ z uwzględnieniem wag w czasie.</li>
+      </ul>
+    </div>
   </div>
 
   <script>
@@ -194,7 +215,7 @@
         hovermode: "x unified"
       });
 
-      // Chart 2
+      // Chart 2 (udziały procentowe)
       const percentData = data.map(d => {
         const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
         const total = values.reduce((a,b) => a+b, 0);
@@ -219,7 +240,7 @@
         hovermode: "x unified"
       });
 
-      // Chart 3
+      // Chart 3 (historyczne udziały)
       const traces3 = componentKeys.map((key) => ({
         x: percentData.map(d => d.date),
         y: percentData.map(d => d[key]),
@@ -305,18 +326,26 @@
           c.shareAbs = totalAbs !== 0 ? (Math.abs(c.delta) / totalAbs * 100) : 0; 
         });
         contributions.sort((a,b) => b.shareAbs - a.shareAbs);
+      } else if (mode === "weighted") {
+        // obliczamy wagę w czasie
+        let weighted = componentKeys.map(k => ({component: k, weightedSum: 0}));
+        for (let i = 1; i < data.length; i++) {
+          const prev = data[i-1];
+          const curr = data[i];
+          const fciLevel = Object.values(prev).slice(1).reduce((a,b) => a + Math.abs(parseFloat(b)), 0);
+          componentKeys.forEach(k => {
+            const delta = parseFloat(curr[k]) - parseFloat(prev[k]);
+            const weight = fciLevel !== 0 ? Math.abs(parseFloat(prev[k])) / fciLevel : 0;
+            const contrib = weight * delta;
+            weighted.find(w => w.component === k).weightedSum += contrib;
+          });
+        }
+        contributions = weighted;
+        contributions.sort((a,b) => Math.abs(b.weightedSum) - Math.abs(a.weightedSum));
       } else {
-        // 🟢 poprawione: najbardziej ujemne na górze
-        const easing = contributions
-          .filter(c => c.shareDelta < 0)
-          .sort((a,b) => a.shareDelta - b.shareDelta);
-
+        const easing = contributions.filter(c => c.shareDelta < 0).sort((a,b) => a.shareDelta - b.shareDelta);
         const neutral = contributions.filter(c => c.shareDelta === 0);
-
-        const tightening = contributions
-          .filter(c => c.shareDelta > 0)
-          .sort((a,b) => b.shareDelta - a.shareDelta);
-
+        const tightening = contributions.filter(c => c.shareDelta > 0).sort((a,b) => b.shareDelta - a.shareDelta);
         contributions = [...easing, ...neutral, ...tightening];
       }
 
@@ -324,6 +353,9 @@
       if (mode === "abs") {
         x = contributions.map(c => c.shareAbs);
         labels = x.map(v => v.toFixed(1) + "%");
+      } else if (mode === "weighted") {
+        x = contributions.map(c => c.weightedSum);
+        labels = x.map(v => v.toFixed(3));
       } else {
         x = contributions.map(c => c.shareDelta);
         labels = x.map(v => v.toFixed(1) + "%");
@@ -331,9 +363,13 @@
 
       const y = contributions.map(c => c.component);
 
-      const colors = contributions.map(c =>
-        c.delta > 0 ? "rgba(220,38,38,0.8)" : (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)")
-      );
+      const colors = contributions.map(c => {
+        if (mode === "weighted") {
+          return c.weightedSum > 0 ? "rgba(220,38,38,0.8)" : (c.weightedSum < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)");
+        } else {
+          return c.delta > 0 ? "rgba(220,38,38,0.8)" : (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)");
+        }
+      });
 
       const trace = {
         type: "bar",
@@ -346,8 +382,8 @@
       };
 
       Plotly.newPlot("impactChart", [trace], {
-        title: `Ranking komponentów (${start.date} → ${end.date}, tryb: ${mode === "abs" ? "udział w |Δ|" : "udział w Δ FCI-G"})`,
-        xaxis: { title: "Udział (%)" },
+        title: `Ranking komponentów (${start.date} → ${end.date}, tryb: ${mode})`,
+        xaxis: { title: mode === "abs" ? "Udział (%)" : (mode === "delta" ? "Udział (%)" : "Ważona zmiana") },
         margin: { t: 80, r: 30, l: 160, b: 60 }
       });
     }
