@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>FCI-G Dashboard (Mobile-first)</title>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<style>
+  <meta charset="UTF-8" />
+  <title>FCI-G Dashboard (Mobile-first)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
     :root{
       --card-bg:#fff;--shadow:0 10px 25px rgba(0,0,0,0.08);
       --pad:14px;
@@ -86,184 +85,143 @@
       #corrRolling3m,#simulationPlot,#plot_pred_curve{height:420px}
       .card-header h2{font-size:18px}
     }
-  
-/* Theme support */
-:root{
-  --bg:#f7fafc; --fg:#111827; --card-bg:#fff; --card-header-bg:#f1f5f9; --border:#e5e7eb; --badge-bg:#eef2ff; --badge-fg:#111827;
-}
-html.dark{
-  --bg:#0b1220; --fg:#e8eef9; --card-bg:#121b2f; --card-header-bg:#182238; --border:#213054; --badge-bg:#192544; --badge-fg:#cde1ff;
-}
-body{ background:var(--bg); color:var(--fg); }
-.card{ background:var(--card-bg); }
-.card-header{ background:var(--card-header-bg); border-bottom:1px solid var(--border); }
-.btn,.drag-handle{ border-color:var(--border); background:var(--card-bg); color:var(--fg); }
-.card-body{ background:var(--card-bg); }
-#fcigBadge{ background:var(--badge-bg)!important; color:var(--badge-fg)!important; border-color:var(--border)!important; }
-</style>
+  </style>
 </head>
-<section class="card" data-id="card-about">
-<div class="card-header">
-<h2>Co mierzy FCI‑G?</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body" style="line-height:1.45">
-<p style="margin:0 0 8px">
-<strong>FCI‑G</strong> to indeks warunków finansowych opracowany przez pracowników Rady FED. Łączy on
-      siedem zmiennych: stopę funduszy federalnych, rentowność 10‑letnich UST, 30‑letnią stopę hipoteczną,
-      spread obligacji korporacyjnych BBB, szeroki indeks akcji, ceny domów oraz nominalny szeroki indeks USD.
-      Wagi pochodzą z modeli (m.in. FRB/US) i odzwierciedlają łączny wpływ <em>trwałej</em> zmiany tych zmiennych
-      na wzrost PKB w kolejnym roku — dzięki czemu indeks można interpretować jako „wiatr w plecy” (wartości ujemne)
-      lub „przeciwny wiatr” (dodatnie) dla aktywności gospodarczej.
-    </p>
-<p style="margin:0;color:#6b7280">
-      Źródło: FEDS Notes, „A New Index to Measure U.S. Financial Conditions”
-      (<a href="https://www.federalreserve.gov/econres/notes/feds-notes/a-new-index-to-measure-us-financial-conditions-20230630.html" rel="noopener" target="_blank">link</a>).
-    </p>
-</div>
-</section>
-<section class="card" data-id="card-stacked">
-<div class="card-header">
-<h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body"><div id="chart1"></div></div>
-</section>
-<section class="card" data-id="card-lines">
-<div class="card-header">
-<h2>Komponenty i FCI-G (linie)</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body"><div id="chart1b"></div></div>
-</section>
-<section class="card" data-id="card-shares">
-<div class="card-header">
-<h2>Procentowy udział komponentów w FCI-G</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body"><div id="chart2"></div></div>
-</section>
-<section class="card" data-id="card-history-shares">
-<div class="card-header">
-<h2>Historyczne udziały komponentów</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body"><div id="chart3"></div></div>
-</section>
-<section class="card" data-id="card-impact">
-<div class="card-header">
-<h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body">
-<div class="controls">
-<label>Od: <input id="startDate" type="date"/></label>
-<label>Do: <input id="endDate" type="date"/></label>
-<button onclick="applyRange()">Zastosuj</button>
-<button onclick="quickRange('ytd')">YTD</button>
-<button onclick="quickRange(1)">1Y</button>
-<button onclick="quickRange(3)">3Y</button>
-<button onclick="quickRange(5)">5Y</button>
-<button onclick="quickRange('all')">All</button>
-</div>
-<div id="impactChart"></div>
-</div>
-</section>
-<section class="card" data-id="card-corr">
-<div class="card-header">
-<h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body">
-<div class="controls">
-<label>Od: <input id="corrFrom" type="month"/></label>
-<label>Do: <input id="corrTo" type="month"/></label>
-<label style="display:flex;gap:6px;align-items:center;">
-<input checked="" id="useChanges" type="checkbox"/> Użyj zmian (ΔFCI-G vs log-zwroty BTC)
+<body>
+
+  <div id="cardsContainer">
+    <section class="card" data-id="card-stacked">
+      <div class="card-header">
+        <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body"><div id="chart1"></div></div>
+    </section>
+
+    <section class="card" data-id="card-lines">
+      <div class="card-header">
+        <h2>Komponenty i FCI-G (linie)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body"><div id="chart1b"></div></div>
+    </section>
+
+    <section class="card" data-id="card-shares">
+      <div class="card-header">
+        <h2>Procentowy udział komponentów w FCI-G</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body"><div id="chart2"></div></div>
+    </section>
+
+    <section class="card" data-id="card-history-shares">
+      <div class="card-header">
+        <h2>Historyczne udziały komponentów</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body"><div id="chart3"></div></div>
+    </section>
+
+    <section class="card" data-id="card-impact">
+      <div class="card-header">
+        <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Od: <input type="date" id="startDate" /></label>
+          <label>Do: <input type="date" id="endDate" /></label>
+          <button onclick="applyRange()">Zastosuj</button>
+          <button onclick="quickRange('ytd')">YTD</button>
+          <button onclick="quickRange(1)">1Y</button>
+          <button onclick="quickRange(3)">3Y</button>
+          <button onclick="quickRange(5)">5Y</button>
+          <button onclick="quickRange('all')">All</button>
+        </div>
+        <div id="impactChart"></div>
+      </div>
+    </section>
+
+    <section class="card" data-id="card-corr">
+      <div class="card-header">
+        <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Od: <input type="month" id="corrFrom" /></label>
+          <label>Do: <input type="month" id="corrTo" /></label>
+          <label style="display:flex;gap:6px;align-items:center;">
+            <input type="checkbox" id="useChanges" checked /> Użyj zmian (ΔFCI-G vs log-zwroty BTC)
           </label>
-<button id="corrRun">Oblicz korelację</button>
-<div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
-</div>
-<div id="corrRolling3m"></div>
-</div>
-</section>
-<section class="card" data-id="card-sim">
-<div class="card-header">
-<h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body">
-<div class="controls">
-<label>Zakres FCI-G (min,max): <input id="simRange" type="text" value="-3,3"/></label>
-<label>FCI-G: <input id="simSlider" max="3" min="-3" step="0.01" type="range" value="0"/></label>
-<div><strong>BTC:</strong> <span id="simOut">—</span></div>
-<div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
-</div>
-<div id="simulationPlot"></div>
-</div>
-</section>
-<section class="card" data-id="card-predcurve">
-<div class="card-header">
-<h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body">
-<div class="controls">
-<label>Skala Y:
+          <button id="corrRun">Oblicz korelację</button>
+          <div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
+        </div>
+        <div id="corrRolling3m"></div>
+      </div>
+    </section>
+
+    <section class="card" data-id="card-sim">
+      <div class="card-header">
+        <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Zakres FCI-G (min,max): <input type="text" id="simRange" value="-3,3" /></label>
+          <label>FCI-G: <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" /></label>
+          <div><strong>BTC:</strong> <span id="simOut">—</span></div>
+          <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
+        </div>
+        <div id="simulationPlot"></div>
+      </div>
+    </section>
+
+    <section class="card" data-id="card-predcurve">
+      <div class="card-header">
+        <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Skala Y:
             <select id="pred-y-scale">
-<option value="linear">linear</option>
-<option value="log">log</option>
-</select>
-</label>
-<small style="opacity:.8">Model: BTC(f) = A·e^{k·f}, A=61090.941, k=−1.14035</small>
-</div>
-<div id="plot_pred_curve"></div>
-</div>
-</section>
-<section class="card" data-id="card-sources">
-<div class="card-header">
-<h2>Źródła</h2>
-<div class="card-controls">
-<button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-<div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
-</div>
-</div>
-<div class="card-body">
-<ul style="margin:0 0 0 18px">
-<li>Dane FCI‑G: <a href="https://github.com/dankostecki/FCIG/blob/main/data/converted.json" rel="noopener" target="_blank">converted.json</a></li>
-<li>Opis metodyki (Fed): <a href="https://www.federalreserve.gov/econres/notes/feds-notes/a-new-index-to-measure-us-financial-conditions-20230630.html" rel="noopener" target="_blank">A New Index to Measure U.S. Financial Conditions</a></li>
-</ul>
-</div>
-</section>
-</div>
-<script>
+              <option value="linear">linear</option>
+              <option value="log">log</option>
+            </select>
+          </label>
+          <small style="opacity:.8">Model: BTC(f) = A·e^{k·f}, A=61090.941, k=−1.14035</small>
+        </div>
+        <div id="plot_pred_curve"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
     /* =========================
        Dane wbudowane + model
        ========================= */
@@ -546,146 +504,5 @@ body{ background:var(--bg); color:var(--fg); }
     // Boot
     loadData();
   </script>
-<script>
-/* === BTC tooltip on pure FCI-G chart === */
-function drawFcigSolo(data){
-  const dates = data.map(d=>d.date);
-  const fci   = data.map(d=>+d[fciKey]);
-  const btc   = fci.map(predFn);
-  const trace = {
-    x: dates, y: fci, mode:"lines", name:"FCI‑G",
-    customdata: btc,
-    hovertemplate: "Data: %{x}<br>FCI‑G: %{y:.3f}<br><b>BTC* (model): %{customdata:,.0f} USD</b><extra></extra>"
-  };
-  const invisible = {
-    x:dates, y:btc, yaxis:"y2", mode:"lines", line:{width:0}, opacity:0, hoverinfo:"skip", showlegend:false
-  };
-  const y2range = [predFn(2.0)*0.95, predFn(-2.0)*1.05];
-
-  Plotly.newPlot("fcigSolo",[trace, invisible],{
-    margin:{t:30,r:80,b:60,l:60},
-    xaxis:{title:"Data",type:"date"},
-    yaxis:{title:"FCI‑G", zeroline:true},
-    yaxis2:{title:"BTC (USD, model)", overlaying:"y", side:"right", tickformat:",", range:y2range, showgrid:false},
-    hovermode:"x unified"
-  });
-  const badge = document.getElementById("fcigBadge");
-  const fig   = document.getElementById("fcigSolo");
-  fig.on('plotly_hover',(d)=>{ const v=d.points[0].customdata; badge.textContent="BTC*: "+v.toLocaleString(); });
-  fig.on('plotly_unhover',()=>{ badge.textContent="BTC*: —"; });
-}
-
-/* Hook into existing load/draw pipeline */
-const _old_drawCharts = drawCharts;
-drawCharts = function(data){
-  _old_drawCharts(data);
-  drawFcigSolo(data);
-};
-
-/* === Theme toggle (page + Plotly) === */
-(function(){
-  const btn = document.getElementById("themeToggle");
-  const root = document.documentElement;
-  const ids = ["chart1","chart1b","chart2","chart3","impactChart","corrRolling3m","simulationPlot","plot_pred_curve","fcigSolo"];
-  function applyTheme(t){
-    root.classList.toggle("dark", t==="dark");
-    localStorage.setItem("theme", t);
-    const isDark = t==="dark";
-    const paper = getComputedStyle(root).getPropertyValue("--card-bg").trim();
-    const fg    = getComputedStyle(root).getPropertyValue("--fg").trim();
-    const grid  = getComputedStyle(root).getPropertyValue("--border").trim();
-    ids.forEach(id=>{
-      const div=document.getElementById(id);
-      if(!div) return;
-      Plotly.relayout(id, {
-        paper_bgcolor: paper, plot_bgcolor: paper,
-        "font.color": fg,
-        "xaxis.gridcolor": grid, "yaxis.gridcolor": grid
-      });
-    });
-  }
-  const saved = localStorage.getItem("theme") || "light";
-  applyTheme(saved);
-  btn.addEventListener("click", ()=>{
-    const next = (document.documentElement.classList.contains("dark")) ? "light":"dark";
-    applyTheme(next);
-  });
-})();
-</script><script>
-// === Ensure globals from existing page ===
-window.predFn = window.predFn || (f => {
-  // fallback: simple BTC model (must be overwritten by main script if defined there)
-  const alpha = 10.996496662385686, beta = -1.1403503021295252, S = 1.0238973190689769;
-  return S * Math.exp(alpha + beta*f);
-});
-window.fciKey = window.fciKey || "FCI_G";
-
-function drawFcigSolo(data){
-  try {
-    const dates = data.map(d=>d.date || d.observation_date || d.Date || d[Object.keys(d)[0]]);
-    const fci   = data.map(d=>+d[window.fciKey]);
-    const btc   = fci.map(window.predFn);
-    const trace = {
-      x: dates, y: fci, mode:"lines", name:"FCI‑G",
-      customdata: btc,
-      hovertemplate: "Data: %{x}<br>FCI‑G: %{y:.3f}<br><b>BTC* (model): %{customdata:,.0f} USD</b><extra></extra>"
-    };
-    const invisible = {
-      x:dates, y:btc, yaxis:"y2", mode:"lines", line:{width:0}, opacity:0, hoverinfo:"skip", showlegend:false
-    };
-    const y2range = [window.predFn(2.0)*0.95, window.predFn(-2.0)*1.05];
-    Plotly.newPlot("fcigSolo",[trace, invisible],{
-      margin:{t:30,r:80,b:60,l:60},
-      xaxis:{title:"Data",type:"date"},
-      yaxis:{title:"FCI‑G", zeroline:true},
-      yaxis2:{title:"BTC (USD, model)", overlaying:"y", side:"right", tickformat:",", range:y2range, showgrid:false},
-      hovermode:"x unified"
-    });
-    const badge = document.getElementById("fcigBadge");
-    const fig   = document.getElementById("fcigSolo");
-    fig.on('plotly_hover',(d)=>{ const v=d.points[0].customdata; badge.textContent="BTC*: "+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v)+" USD"; });
-    fig.on('plotly_unhover',()=>{ badge.textContent="BTC*: —"; });
-  } catch(e){ console.error("drawFcigSolo error", e); }
-}
-
-// Hook into existing drawCharts if present
-(function(){
-  const old = window.drawCharts;
-  window.drawCharts = function(data){
-    try{ if(typeof old === "function") old(data); }catch(e){ console.warn(e); }
-    try{ drawFcigSolo(data); }catch(e){ console.warn(e); }
-  }
-})();
-
-// Theme toggle for entire page + Plotly charts
-(function(){
-  const btn = document.getElementById("themeToggle");
-  const root = document.documentElement;
-  const ids = ["chart1","chart1b","chart2","chart3","impactChart","corrRolling3m","simulationPlot","plot_pred_curve","fcigSolo"];
-  function applyTheme(t){
-    root.classList.toggle("dark", t==="dark");
-    localStorage.setItem("theme", t);
-    const paper = getComputedStyle(root).getPropertyValue("--card-bg") || getComputedStyle(root).getPropertyValue("--bg");
-    const fg    = getComputedStyle(root).getPropertyValue("--fg");
-    const grid  = getComputedStyle(root).getPropertyValue("--border") || "#e5e7eb";
-    ids.forEach(id=>{
-      const div=document.getElementById(id);
-      if(!div) return;
-      Plotly.relayout(id, {
-        paper_bgcolor: paper.trim(), plot_bgcolor: paper.trim(),
-        "font.color": fg.trim(),
-        "xaxis.gridcolor": grid.trim(), "yaxis.gridcolor": grid.trim()
-      });
-    });
-  }
-  const saved = localStorage.getItem("theme") || "light";
-  applyTheme(saved);
-  if(btn){
-    btn.addEventListener("click", ()=>{
-      const next = (document.documentElement.classList.contains("dark")) ? "light":"dark";
-      applyTheme(next);
-    });
-  }
-})();
-</script><footer id="siteFooter" style="margin-top:18px;padding:12px 0;color:#6b7280;font-size:13px;text-align:center;border-top:1px solid var(--border)">Źródło opisu FCI‑G: <a href="https://www.federalreserve.gov/econres/notes/feds-notes/a-new-index-to-measure-us-financial-conditions-20230630.html" rel="noopener" target="_blank">FEDS Notes — A New Index to Measure U.S. Financial Conditions</a></footer></body>
+</body>
 </html>
