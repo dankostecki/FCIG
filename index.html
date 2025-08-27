@@ -34,7 +34,7 @@
       margin-bottom: 15px;
       align-items: center;
     }
-    .controls input, .controls button {
+    .controls input, .controls select, .controls button {
       padding: 6px 12px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
@@ -47,6 +47,8 @@
       gap: 10px;
       align-items: center;
     }
+    /* Nowe wykresy */
+    #corrRolling3m, #simulationPlot { width: 100%; height: 460px; }
   </style>
 </head>
 <body>
@@ -89,7 +91,123 @@
     <div id="impactChart"></div>
   </div>
 
+  <!-- NOWY KOMPONENT #1: Korelacja i 3M rolling -->
+  <div class="card">
+    <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
+    <div class="controls">
+      <label>Od: <input type="month" id="corrFrom"></label>
+      <label>Do: <input type="month" id="corrTo"></label>
+      <label style="display:flex; gap:6px; align-items:center;">
+        <input type="checkbox" id="useChanges" checked>
+        Użyj zmian (ΔFCI-G vs log-zwroty BTC)
+      </label>
+      <button id="corrRun">Oblicz korelację</button>
+      <div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
+    </div>
+    <div id="corrRolling3m"></div>
+  </div>
+
+  <!-- NOWY KOMPONENT #2: Symulacja BTC = S·e^(α+β·f) -->
+  <div class="card">
+    <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
+    <div class="controls">
+      <label>Zakres FCI-G (min,max):
+        <input type="text" id="simRange" value="-3,3">
+      </label>
+      <label>FCI-G:
+        <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0">
+      </label>
+      <div><strong>BTC:</strong> <span id="simOut">—</span></div>
+      <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
+    </div>
+    <div id="simulationPlot"></div>
+  </div>
+
   <script>
+    /* =========================
+       Dane + pomocnicze funkcje
+       ========================= */
+
+    // Kurs BTC (miesięcznie) – wklejone z Twojej listy
+    const BTC_SERIES = [
+      { month: "2022-09", price: 19415.8 },
+      { month: "2022-10", price: 20472.79 },
+      { month: "2022-11", price: 17179.78 },
+      { month: "2022-12", price: 16531.0 },
+      { month: "2023-01", price: 23134.74 },
+      { month: "2023-02", price: 23146.93 },
+      { month: "2023-03", price: 28492.72 },
+      { month: "2023-04", price: 29271.16 },
+      { month: "2023-05", price: 27222.9 },
+      { month: "2023-06", price: 30475.82 },
+      { month: "2023-07", price: 29223.31 },
+      { month: "2023-08", price: 25922.51 },
+      { month: "2023-09", price: 26959.4 },
+      { month: "2023-10", price: 34667.88 },
+      { month: "2023-11", price: 37743.0 },
+      { month: "2023-12", price: 42300.78 },
+      { month: "2024-01", price: 42599.49 },
+      { month: "2024-02", price: 61240.13 },
+      { month: "2024-03", price: 71213.11 },
+      { month: "2024-04", price: 60690.8 },
+      { month: "2024-05", price: 67506.03 },
+      { month: "2024-06", price: 62678.1 },
+      { month: "2024-07", price: 64607.71 },
+      { month: "2024-08", price: 58956.52 },
+      { month: "2024-09", price: 60790.0 },
+      { month: "2024-10", price: 69467.29 },
+      { month: "2024-11", price: 97263.18 },
+      { month: "2024-12", price: 94383.59 },
+      { month: "2025-01", price: 100623.85 },
+      { month: "2025-02", price: 86018.76 },
+      { month: "2025-03", price: 85170.37 },
+      { month: "2025-04", price: 96524.98 },
+      { month: "2025-05", price: 105697.94 },
+      { month: "2025-06", price: 105711.78 },
+      { month: "2025-07", price: 113248.73 },
+    ];
+
+    // Parametry modelu: BTC(f) = A * exp(k * f), gdzie A = S*e^alpha
+    const MODEL = { A: 61090.941, k: -1.14035, dataRange: [-0.78, 1.00] };
+
+    // Pomoc: formaty dat
+    const toMonthKey = (isoDate) => {
+      // oczekujemy "YYYY-MM-DD"
+      const [y,m] = isoDate.split("-"); return `${y}-${m}`;
+    };
+
+    // Korelacja
+    function correlation(x, y) {
+      const n = x.length;
+      const mx = x.reduce((s,v)=>s+v,0)/n;
+      const my = y.reduce((s,v)=>s+v,0)/n;
+      let num=0, dx=0, dy=0;
+      for (let i=0;i<n;i++){
+        const xa=x[i]-mx, yb=y[i]-my;
+        num+=xa*yb; dx+=xa*xa; dy+=yb*yb;
+      }
+      return num/Math.sqrt(dx*dy);
+    }
+
+    function rollingCorrelation(a, b, window) {
+      const out = new Array(a.length).fill(null);
+      for (let i=window-1;i<a.length;i++){
+        const A=a.slice(i-window+1, i+1), B=b.slice(i-window+1, i+1);
+        const ma = A.reduce((s,v)=>s+v,0)/window;
+        const mb = B.reduce((s,v)=>s+v,0)/window;
+        let num=0, da=0, db=0;
+        for (let j=0;j<window;j++){
+          const xa=A[j]-ma, yb=B[j]-mb;
+          num+=xa*yb; da+=xa*xa; db+=yb*yb;
+        }
+        out[i] = (da>0 && db>0) ? num/Math.sqrt(da*db) : null;
+      }
+      return out;
+    }
+
+    /* ======================
+       Istniejący dashboard
+       ====================== */
     let globalData = [];
     const fciKey = "FCI-G Index (baseline)";
     const componentKeys = ["FFR", "10Yr Treasury", "Mortgage Rate", "BBB", "Stock Market", "House Prices", "Dollar"];
@@ -104,6 +222,10 @@
 
       drawCharts(data);
       updateImpact(data[0].date, data[data.length-1].date);
+
+      // Po załadowaniu – odpal nowe komponenty
+      initCorrelationComponent();
+      initSimulationComponent();
     }
 
     function drawCharts(data) {
@@ -158,9 +280,7 @@
         const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
         const total = values.reduce((a,b) => a+b, 0);
         const shares = {};
-        componentKeys.forEach((k,i) => {
-          shares[k] = total > 0 ? (values[i] / total * 100) : 0;
-        });
+        componentKeys.forEach((k,i) => { shares[k] = total > 0 ? (values[i] / total * 100) : 0; });
         return { date: d.date, ...shares };
       });
       const traces2 = componentKeys.map((key) => ({
@@ -197,18 +317,13 @@
     function updateImpact(startDate, endDate) {
       const data = globalData.filter(d => d.date >= startDate && d.date <= endDate);
       if (data.length < 2) return;
-
       const start = data[0];
       const end = data[data.length-1];
 
       const contributions = [
         { component: fciKey, delta: parseFloat(end[fciKey]) - parseFloat(start[fciKey]) },
-        ...componentKeys.map(k => ({
-          component: k,
-          delta: parseFloat(end[k]) - parseFloat(start[k])
-        }))
+        ...componentKeys.map(k => ({ component: k, delta: parseFloat(end[k]) - parseFloat(start[k]) }))
       ];
-
       contributions.sort((a,b) => a.delta - b.delta);
 
       const trace = {
@@ -264,6 +379,143 @@
       updateImpact(startDate, endDate);
     }
 
+    /* ===============================
+       NOWY KOMPONENT #1 – korelacja
+       =============================== */
+    function initCorrelationComponent(){
+      // 1) Zbuduj miesięczny klucz → FCI-G
+      const fciByMonth = new Map(globalData.map(d => [toMonthKey(d.date), +d[fciKey]]));
+      // 2) Połącz z BTC po miesiącu
+      const joined = BTC_SERIES
+        .filter(r => fciByMonth.has(r.month))
+        .map(r => ({ month: r.month, fcig: fciByMonth.get(r.month), btc: r.price }))
+        .sort((a,b)=> a.month.localeCompare(b.month));
+
+      // UI: ustaw min/max
+      const elFrom = document.getElementById("corrFrom");
+      const elTo   = document.getElementById("corrTo");
+      elFrom.value = joined[0].month;
+      elTo.value   = joined[joined.length-1].month;
+
+      const elUse = document.getElementById("useChanges");
+      const elBtn = document.getElementById("corrRun");
+      const elOut = document.getElementById("corrValue");
+
+      function toChanges(arr){
+        const out = [];
+        for (let i=1;i<arr.length;i++){
+          const prev = arr[i-1];
+          const cur  = arr[i];
+          out.push({
+            month: cur.month,
+            d_fcig: cur.fcig - prev.fcig,
+            r_btc: Math.log(cur.btc / prev.btc)
+          });
+        }
+        return out;
+      }
+
+      function run(){
+        const from = elFrom.value;
+        const to   = elTo.value;
+        let arr = joined.filter(d => (!from || d.month>=from) && (!to || d.month<=to));
+
+        if (elUse.checked){
+          const ch = toChanges(arr);
+          if (ch.length < 3) { elOut.textContent = "—"; drawRolling(ch.map(d=>d.month), []); return; }
+          const corr = correlation(ch.map(d=>d.d_fcig), ch.map(d=>d.r_btc));
+          elOut.textContent = corr.toFixed(3);
+          const roll = rollingCorrelation(ch.map(d=>d.d_fcig), ch.map(d=>d.r_btc), 3);
+          drawRolling(ch.map(d=>d.month), roll);
+        } else {
+          if (arr.length < 3) { elOut.textContent = "—"; drawRolling(arr.map(d=>d.month), []); return; }
+          const corr = correlation(arr.map(d=>d.fcig), arr.map(d=>d.btc));
+          elOut.textContent = corr.toFixed(3);
+          const roll = rollingCorrelation(arr.map(d=>d.fcig), arr.map(d=>d.btc), 3);
+          drawRolling(arr.map(d=>d.month), roll);
+        }
+      }
+
+      function drawRolling(x, y){
+        Plotly.newPlot("corrRolling3m", [{
+          x, y, mode: "lines", name: "3M rolling"
+        }], {
+          title: "Korelacja krocząca 3M",
+          yaxis: { range: [-1,1] },
+          xaxis: { title: "Miesiąc" }
+        });
+      }
+
+      elBtn.addEventListener("click", run);
+      run(); // pierwszy render
+    }
+
+    /* ==============================================
+       NOWY KOMPONENT #2 – symulacja BTC = A·e^{k·f}
+       ============================================== */
+    function initSimulationComponent(){
+      const elRange  = document.getElementById("simRange");
+      const elSlider = document.getElementById("simSlider");
+      const elOut    = document.getElementById("simOut");
+
+      function fn(x){ return MODEL.A * Math.exp(MODEL.k * x); }
+
+      function currentRange(){
+        const [a,b] = elRange.value.split(",").map(s=>+s.trim());
+        const min = Number.isFinite(a) ? a : -3;
+        const max = Number.isFinite(b) ? b :  3;
+        elSlider.min = String(min);
+        elSlider.max = String(max);
+        return [min,max];
+      }
+
+      function renderPlot(sliderX){
+        const [min,max] = currentRange();
+        const steps = 240;
+        const xs=[], ys=[];
+        for (let i=0;i<=steps;i++){
+          const x = min + (max-min)*i/steps;
+          xs.push(x); ys.push(fn(x));
+        }
+        const curve = { x: xs, y: ys, mode: "lines", name: "BTC = A·e^{k·f}" };
+        const point = { x: [sliderX], y: [fn(sliderX)], mode: "markers", name: "Wybrany FCI-G" };
+
+        const shapes = [];
+        const [aMin, aMax] = MODEL.dataRange;
+        if (min < aMin) shapes.push({type:"rect", xref:"x", yref:"paper", x0:min, x1:aMin, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{width:0}});
+        if (max > aMax) shapes.push({type:"rect", xref:"x", yref:"paper", x0:aMax, x1:max, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{width:0}});
+        shapes.push(
+          {type:"line", x0:aMin, x1:aMin, y0:0, y1:1, xref:"x", yref:"paper", line:{dash:"dash", width:1}},
+          {type:"line", x0:aMax, x1:aMax, y0:0, y1:1, xref:"x", yref:"paper", line:{dash:"dash", width:1}}
+        );
+
+        Plotly.newPlot("simulationPlot", [curve, point], {
+          title: "Symulacja ceny BTC dla zadanego FCI-G",
+          xaxis: { title: "FCI-G" },
+          yaxis: { title: "BTC (USD)", type: "log" },
+          shapes
+        });
+      }
+
+      function updatePoint(x){
+        Plotly.restyle("simulationPlot", { x: [[x]], y: [[fn(x)]] }, [1]);
+      }
+
+      // Domyślne: zakres = [-3,3], slider = 0; ustaw docelowo pod model
+      elRange.value  = "-3,3";
+      elSlider.value = "0";
+      renderPlot(+elSlider.value);
+      elOut.textContent = fn(+elSlider.value).toLocaleString(undefined,{maximumFractionDigits:2});
+
+      elRange.addEventListener("change", ()=>renderPlot(+elSlider.value));
+      elSlider.addEventListener("input", ()=>{
+        const x = +elSlider.value;
+        updatePoint(x);
+        elOut.textContent = fn(x).toLocaleString(undefined,{maximumFractionDigits:2});
+      });
+    }
+
+    // Start
     loadData();
   </script>
 </body>
