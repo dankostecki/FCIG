@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>FCI-G Dashboard</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       margin: 0;
@@ -24,9 +25,7 @@
       max-width: 1200px;
       width: 100%;
     }
-    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
     h2 { margin: 0 0 10px; color: #111827; }
-
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -42,17 +41,13 @@
       cursor: pointer;
     }
     .controls button:hover { background: #e5e7eb; }
-    .date-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    /* Nowe wykresy */
-    #corrRolling3m, #simulationPlot { width: 100%; height: 460px; }
+    .date-controls { display: flex; gap: 10px; align-items: center; }
+    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
+    #corrRolling3m, #simulationPlot, #plot_pred_curve { width: 100%; height: 460px; }
   </style>
 </head>
 <body>
-  <!-- Wykresy główne -->
+  <!-- Sekcje oryginalne -->
   <div class="card">
     <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
     <div id="chart1"></div>
@@ -73,13 +68,12 @@
     <div id="chart3"></div>
   </div>
 
-  <!-- Analiza wkładów -->
   <div class="card">
     <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
     <div class="controls">
       <div class="date-controls">
-        <label>Od: <input type="date" id="startDate"></label>
-        <label>Do: <input type="date" id="endDate"></label>
+        <label>Od: <input type="date" id="startDate" /></label>
+        <label>Do: <input type="date" id="endDate" /></label>
         <button onclick="applyRange()">Zastosuj</button>
       </div>
       <button onclick="quickRange('ytd')">YTD</button>
@@ -91,14 +85,14 @@
     <div id="impactChart"></div>
   </div>
 
-  <!-- NOWY KOMPONENT #1: Korelacja i 3M rolling -->
+  <!-- NOWY #1: Korelacja i 3M rolling -->
   <div class="card">
     <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
     <div class="controls">
-      <label>Od: <input type="month" id="corrFrom"></label>
-      <label>Do: <input type="month" id="corrTo"></label>
+      <label>Od: <input type="month" id="corrFrom" /></label>
+      <label>Do: <input type="month" id="corrTo" /></label>
       <label style="display:flex; gap:6px; align-items:center;">
-        <input type="checkbox" id="useChanges" checked>
+        <input type="checkbox" id="useChanges" checked />
         Użyj zmian (ΔFCI-G vs log-zwroty BTC)
       </label>
       <button id="corrRun">Oblicz korelację</button>
@@ -107,15 +101,15 @@
     <div id="corrRolling3m"></div>
   </div>
 
-  <!-- NOWY KOMPONENT #2: Symulacja BTC = S·e^(α+β·f) -->
+  <!-- NOWY #2: Symulacja BTC = S·e^(α+β·f) -->
   <div class="card">
     <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
     <div class="controls">
       <label>Zakres FCI-G (min,max):
-        <input type="text" id="simRange" value="-3,3">
+        <input type="text" id="simRange" value="-3,3" />
       </label>
       <label>FCI-G:
-        <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0">
+        <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" />
       </label>
       <div><strong>BTC:</strong> <span id="simOut">—</span></div>
       <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
@@ -123,12 +117,25 @@
     <div id="simulationPlot"></div>
   </div>
 
+  <!-- NOWY #3: BTC vs FCI-G — prediction curve -->
+  <div class="card">
+    <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
+    <div class="controls">
+      <label>Skala Y:
+        <select id="pred-y-scale">
+          <option value="linear">linear</option>
+          <option value="log">log</option>
+        </select>
+      </label>
+      <small style="opacity:.8">Model: BTC(f) = A·e^{k·f}, A=61090.941, k=−1.14035</small>
+    </div>
+    <div id="plot_pred_curve"></div>
+  </div>
+
   <script>
     /* =========================
-       Dane + pomocnicze funkcje
+       Dane wbudowane + model
        ========================= */
-
-    // Kurs BTC (miesięcznie) – wklejone z Twojej listy
     const BTC_SERIES = [
       { month: "2022-09", price: 19415.8 },
       { month: "2022-10", price: 20472.79 },
@@ -167,50 +174,48 @@
       { month: "2025-07", price: 113248.73 },
     ];
 
-    // Parametry modelu: BTC(f) = A * exp(k * f), gdzie A = S*e^alpha
+    // Model z Duan smearing: BTC(f) = A * exp(k*f)
     const MODEL = { A: 61090.941, k: -1.14035, dataRange: [-0.78, 1.00] };
+    const predFn = (f) => MODEL.A * Math.exp(MODEL.k * f);
 
-    // Pomoc: formaty dat
-    const toMonthKey = (isoDate) => {
-      // oczekujemy "YYYY-MM-DD"
-      const [y,m] = isoDate.split("-"); return `${y}-${m}`;
-    };
-
-    // Korelacja
+    /* =========================
+       Pomocnicze
+       ========================= */
+    const toMonthKey = (iso) => iso.split("-").slice(0, 2).join("-");
     function correlation(x, y) {
       const n = x.length;
-      const mx = x.reduce((s,v)=>s+v,0)/n;
-      const my = y.reduce((s,v)=>s+v,0)/n;
-      let num=0, dx=0, dy=0;
-      for (let i=0;i<n;i++){
-        const xa=x[i]-mx, yb=y[i]-my;
-        num+=xa*yb; dx+=xa*xa; dy+=yb*yb;
+      const mx = x.reduce((s, v) => s + v, 0) / n;
+      const my = y.reduce((s, v) => s + v, 0) / n;
+      let num = 0, dx = 0, dy = 0;
+      for (let i = 0; i < n; i++) {
+        const xa = x[i] - mx, yb = y[i] - my;
+        num += xa * yb; dx += xa * xa; dy += yb * yb;
       }
-      return num/Math.sqrt(dx*dy);
+      return num / Math.sqrt(dx * dy);
     }
-
     function rollingCorrelation(a, b, window) {
       const out = new Array(a.length).fill(null);
-      for (let i=window-1;i<a.length;i++){
-        const A=a.slice(i-window+1, i+1), B=b.slice(i-window+1, i+1);
-        const ma = A.reduce((s,v)=>s+v,0)/window;
-        const mb = B.reduce((s,v)=>s+v,0)/window;
-        let num=0, da=0, db=0;
-        for (let j=0;j<window;j++){
-          const xa=A[j]-ma, yb=B[j]-mb;
-          num+=xa*yb; da+=xa*xa; db+=yb*yb;
+      for (let i = window - 1; i < a.length; i++) {
+        const A = a.slice(i - window + 1, i + 1);
+        const B = b.slice(i - window + 1, i + 1);
+        const ma = A.reduce((s, v) => s + v, 0) / window;
+        const mb = B.reduce((s, v) => s + v, 0) / window;
+        let num = 0, da = 0, db = 0;
+        for (let j = 0; j < window; j++) {
+          const xa = A[j] - ma, yb = B[j] - mb;
+          num += xa * yb; da += xa * xa; db += yb * yb;
         }
-        out[i] = (da>0 && db>0) ? num/Math.sqrt(da*db) : null;
+        out[i] = (da > 0 && db > 0) ? num / Math.sqrt(da * db) : null;
       }
       return out;
     }
 
-    /* ======================
-       Istniejący dashboard
-       ====================== */
+    /* =========================
+       Dashboard główny
+       ========================= */
     let globalData = [];
     const fciKey = "FCI-G Index (baseline)";
-    const componentKeys = ["FFR", "10Yr Treasury", "Mortgage Rate", "BBB", "Stock Market", "House Prices", "Dollar"];
+    const componentKeys = ["FFR","10Yr Treasury","Mortgage Rate","BBB","Stock Market","House Prices","Dollar"];
 
     async function loadData() {
       const res = await fetch("./data/converted.json");
@@ -218,28 +223,28 @@
       globalData = data;
 
       document.getElementById("startDate").value = data[0].date;
-      document.getElementById("endDate").value = data[data.length-1].date;
+      document.getElementById("endDate").value = data[data.length - 1].date;
 
       drawCharts(data);
-      updateImpact(data[0].date, data[data.length-1].date);
+      updateImpact(data[0].date, data[data.length - 1].date);
 
-      // Po załadowaniu – odpal nowe komponenty
       initCorrelationComponent();
       initSimulationComponent();
+      initPredCurveUI();
     }
 
     function drawCharts(data) {
-      // Chart 1
+      // Chart 1: stacked bars + FCI-G
       const traces1 = componentKeys.map((key) => ({
         x: data.map(d => d.date),
-        y: data.map(d => parseFloat(d[key])),
+        y: data.map(d => +d[key]),
         name: key,
         type: "bar",
         opacity: 0.9
       }));
       const fciLine = {
         x: data.map(d => d.date),
-        y: data.map(d => parseFloat(d[fciKey])),
+        y: data.map(d => +d[fciKey]),
         mode: "lines",
         name: "FCI-G Index (baseline)",
         line: { color: "#111827", width: 3 }
@@ -253,16 +258,16 @@
         hovermode: "x unified"
       });
 
-      // Chart 1b
+      // Chart 1b: lines
       const traces1b = componentKeys.map((key) => ({
         x: data.map(d => d.date),
-        y: data.map(d => parseFloat(d[key])),
+        y: data.map(d => +d[key]),
         mode: "lines",
         name: key
       }));
       const fciLine2 = {
         x: data.map(d => d.date),
-        y: data.map(d => parseFloat(d[fciKey])),
+        y: data.map(d => +d[fciKey]),
         mode: "lines",
         name: "FCI-G Index (baseline)",
         line: { color: "#111827", width: 3 }
@@ -275,12 +280,12 @@
         hovermode: "x unified"
       });
 
-      // Chart 2
+      // Chart 2: percent shares
       const percentData = data.map(d => {
-        const values = componentKeys.map(k => Math.abs(parseFloat(d[k])));
-        const total = values.reduce((a,b) => a+b, 0);
+        const values = componentKeys.map(k => Math.abs(+d[k]));
+        const total = values.reduce((a,b)=>a+b, 0);
         const shares = {};
-        componentKeys.forEach((k,i) => { shares[k] = total > 0 ? (values[i] / total * 100) : 0; });
+        componentKeys.forEach((k, i) => { shares[k] = total > 0 ? (values[i] / total * 100) : 0; });
         return { date: d.date, ...shares };
       });
       const traces2 = componentKeys.map((key) => ({
@@ -292,13 +297,13 @@
       Plotly.newPlot("chart2", traces2, {
         barmode: "stack",
         xaxis: { tickangle: -45, automargin: true },
-        yaxis: { title: "Share (%)", range: [0,100] },
+        yaxis: { title: "Share (%)", range: [0, 100] },
         legend: { orientation: "h", y: -0.3 },
         margin: { t: 40, r: 20, l: 50, b: 100 },
         hovermode: "x unified"
       });
 
-      // Chart 3
+      // Chart 3: percent shares (lines)
       const traces3 = componentKeys.map((key) => ({
         x: percentData.map(d => d.date),
         y: percentData.map(d => d[key]),
@@ -307,7 +312,7 @@
       }));
       Plotly.newPlot("chart3", traces3, {
         xaxis: { tickangle: -45, automargin: true },
-        yaxis: { title: "Share (%)", range: [0,100] },
+        yaxis: { title: "Share (%)", range: [0, 100] },
         legend: { orientation: "h", y: -0.3 },
         margin: { t: 40, r: 20, l: 50, b: 100 },
         hovermode: "x unified"
@@ -318,13 +323,12 @@
       const data = globalData.filter(d => d.date >= startDate && d.date <= endDate);
       if (data.length < 2) return;
       const start = data[0];
-      const end = data[data.length-1];
+      const end = data[data.length - 1];
 
       const contributions = [
-        { component: fciKey, delta: parseFloat(end[fciKey]) - parseFloat(start[fciKey]) },
-        ...componentKeys.map(k => ({ component: k, delta: parseFloat(end[k]) - parseFloat(start[k]) }))
-      ];
-      contributions.sort((a,b) => a.delta - b.delta);
+        { component: fciKey, delta: +end[fciKey] - +start[fciKey] },
+        ...componentKeys.map(k => ({ component: k, delta: +end[k] - +start[k] }))
+      ].sort((a, b) => a.delta - b.delta);
 
       const trace = {
         type: "bar",
@@ -351,7 +355,7 @@
     function quickRange(years) {
       const data = globalData;
       if (!data.length) return;
-      const endDate = data[data.length-1].date;
+      const endDate = data[data.length - 1].date;
 
       if (years === "all") {
         document.getElementById("startDate").value = data[0].date;
@@ -372,40 +376,35 @@
       }
       applyRange();
     }
-
     function applyRange() {
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
       updateImpact(startDate, endDate);
     }
 
-    /* ===============================
-       NOWY KOMPONENT #1 – korelacja
-       =============================== */
-    function initCorrelationComponent(){
-      // 1) Zbuduj miesięczny klucz → FCI-G
+    /* =========================
+       NOWY #1: Korelacja + 3M rolling
+       ========================= */
+    function initCorrelationComponent() {
       const fciByMonth = new Map(globalData.map(d => [toMonthKey(d.date), +d[fciKey]]));
-      // 2) Połącz z BTC po miesiącu
       const joined = BTC_SERIES
         .filter(r => fciByMonth.has(r.month))
         .map(r => ({ month: r.month, fcig: fciByMonth.get(r.month), btc: r.price }))
-        .sort((a,b)=> a.month.localeCompare(b.month));
+        .sort((a, b) => a.month.localeCompare(b.month));
 
-      // UI: ustaw min/max
       const elFrom = document.getElementById("corrFrom");
       const elTo   = document.getElementById("corrTo");
       elFrom.value = joined[0].month;
-      elTo.value   = joined[joined.length-1].month;
+      elTo.value   = joined[joined.length - 1].month;
 
       const elUse = document.getElementById("useChanges");
       const elBtn = document.getElementById("corrRun");
       const elOut = document.getElementById("corrValue");
 
-      function toChanges(arr){
+      function toChanges(arr) {
         const out = [];
-        for (let i=1;i<arr.length;i++){
-          const prev = arr[i-1];
-          const cur  = arr[i];
+        for (let i = 1; i < arr.length; i++) {
+          const prev = arr[i - 1], cur = arr[i];
           out.push({
             month: cur.month,
             d_fcig: cur.fcig - prev.fcig,
@@ -415,66 +414,74 @@
         return out;
       }
 
-      function run(){
-        const from = elFrom.value;
-        const to   = elTo.value;
-        let arr = joined.filter(d => (!from || d.month>=from) && (!to || d.month<=to));
-
-        if (elUse.checked){
-          const ch = toChanges(arr);
-          if (ch.length < 3) { elOut.textContent = "—"; drawRolling(ch.map(d=>d.month), []); return; }
-          const corr = correlation(ch.map(d=>d.d_fcig), ch.map(d=>d.r_btc));
-          elOut.textContent = corr.toFixed(3);
-          const roll = rollingCorrelation(ch.map(d=>d.d_fcig), ch.map(d=>d.r_btc), 3);
-          drawRolling(ch.map(d=>d.month), roll);
-        } else {
-          if (arr.length < 3) { elOut.textContent = "—"; drawRolling(arr.map(d=>d.month), []); return; }
-          const corr = correlation(arr.map(d=>d.fcig), arr.map(d=>d.btc));
-          elOut.textContent = corr.toFixed(3);
-          const roll = rollingCorrelation(arr.map(d=>d.fcig), arr.map(d=>d.btc), 3);
-          drawRolling(arr.map(d=>d.month), roll);
-        }
-      }
-
-      function drawRolling(x, y){
+      function drawRolling(x, y) {
         Plotly.newPlot("corrRolling3m", [{
           x, y, mode: "lines", name: "3M rolling"
         }], {
           title: "Korelacja krocząca 3M",
-          yaxis: { range: [-1,1] },
+          yaxis: { range: [-1, 1] },
           xaxis: { title: "Miesiąc" }
         });
+      }
+
+      function run() {
+        const from = elFrom.value;
+        const to   = elTo.value;
+        let arr = joined.filter(d => (!from || d.month >= from) && (!to || d.month <= to));
+
+        if (elUse.checked) {
+          const ch = toChanges(arr);
+          if (ch.length < 3) {
+            elOut.textContent = "—";
+            drawRolling(ch.map(d => d.month), []);
+            return;
+          }
+          const corr = correlation(ch.map(d => d.d_fcig), ch.map(d => d.r_btc));
+          elOut.textContent = corr.toFixed(3);
+          const roll = rollingCorrelation(ch.map(d => d.d_fcig), ch.map(d => d.r_btc), 3);
+          drawRolling(ch.map(d => d.month), roll);
+        } else {
+          if (arr.length < 3) {
+            elOut.textContent = "—";
+            drawRolling(arr.map(d => d.month), []);
+            return;
+          }
+          const corr = correlation(arr.map(d => d.fcig), arr.map(d => d.btc));
+          elOut.textContent = corr.toFixed(3);
+          const roll = rollingCorrelation(arr.map(d => d.fcig), arr.map(d => d.btc), 3);
+          drawRolling(arr.map(d => d.month), roll);
+        }
       }
 
       elBtn.addEventListener("click", run);
       run(); // pierwszy render
     }
 
-    /* ==============================================
-       NOWY KOMPONENT #2 – symulacja BTC = A·e^{k·f}
-       ============================================== */
-    function initSimulationComponent(){
+    /* =========================
+       NOWY #2: Symulacja BTC = A·e^{k·f}
+       ========================= */
+    function initSimulationComponent() {
       const elRange  = document.getElementById("simRange");
       const elSlider = document.getElementById("simSlider");
       const elOut    = document.getElementById("simOut");
 
-      function fn(x){ return MODEL.A * Math.exp(MODEL.k * x); }
+      function fn(x) { return MODEL.A * Math.exp(MODEL.k * x); }
 
-      function currentRange(){
-        const [a,b] = elRange.value.split(",").map(s=>+s.trim());
+      function currentRange() {
+        const [a, b] = elRange.value.split(",").map(s => +s.trim());
         const min = Number.isFinite(a) ? a : -3;
         const max = Number.isFinite(b) ? b :  3;
         elSlider.min = String(min);
         elSlider.max = String(max);
-        return [min,max];
+        return [min, max];
       }
 
-      function renderPlot(sliderX){
-        const [min,max] = currentRange();
+      function renderPlot(sliderX) {
+        const [min, max] = currentRange();
         const steps = 240;
-        const xs=[], ys=[];
-        for (let i=0;i<=steps;i++){
-          const x = min + (max-min)*i/steps;
+        const xs = [], ys = [];
+        for (let i = 0; i <= steps; i++) {
+          const x = min + (max - min) * i / steps;
           xs.push(x); ys.push(fn(x));
         }
         const curve = { x: xs, y: ys, mode: "lines", name: "BTC = A·e^{k·f}" };
@@ -482,11 +489,11 @@
 
         const shapes = [];
         const [aMin, aMax] = MODEL.dataRange;
-        if (min < aMin) shapes.push({type:"rect", xref:"x", yref:"paper", x0:min, x1:aMin, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{width:0}});
-        if (max > aMax) shapes.push({type:"rect", xref:"x", yref:"paper", x0:aMax, x1:max, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{width:0}});
+        if (min < aMin) shapes.push({ type:"rect", xref:"x", yref:"paper", x0:min, x1:aMin, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{ width:0 }});
+        if (max > aMax) shapes.push({ type:"rect", xref:"x", yref:"paper", x0:aMax, x1:max, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{ width:0 }});
         shapes.push(
-          {type:"line", x0:aMin, x1:aMin, y0:0, y1:1, xref:"x", yref:"paper", line:{dash:"dash", width:1}},
-          {type:"line", x0:aMax, x1:aMax, y0:0, y1:1, xref:"x", yref:"paper", line:{dash:"dash", width:1}}
+          { type:"line", x0:aMin, x1:aMin, y0:0, y1:1, xref:"x", yref:"paper", line:{ dash:"dash", width:1 }},
+          { type:"line", x0:aMax, x1:aMax, y0:0, y1:1, xref:"x", yref:"paper", line:{ dash:"dash", width:1 }}
         );
 
         Plotly.newPlot("simulationPlot", [curve, point], {
@@ -497,22 +504,77 @@
         });
       }
 
-      function updatePoint(x){
+      function updatePoint(x) {
         Plotly.restyle("simulationPlot", { x: [[x]], y: [[fn(x)]] }, [1]);
       }
 
-      // Domyślne: zakres = [-3,3], slider = 0; ustaw docelowo pod model
       elRange.value  = "-3,3";
       elSlider.value = "0";
       renderPlot(+elSlider.value);
-      elOut.textContent = fn(+elSlider.value).toLocaleString(undefined,{maximumFractionDigits:2});
+      elOut.textContent = fn(+elSlider.value).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
-      elRange.addEventListener("change", ()=>renderPlot(+elSlider.value));
-      elSlider.addEventListener("input", ()=>{
+      elRange.addEventListener("change", () => renderPlot(+elSlider.value));
+      elSlider.addEventListener("input", () => {
         const x = +elSlider.value;
         updatePoint(x);
-        elOut.textContent = fn(x).toLocaleString(undefined,{maximumFractionDigits:2});
+        elOut.textContent = fn(x).toLocaleString(undefined, { maximumFractionDigits: 2 });
       });
+    }
+
+    /* =========================
+       NOWY #3: Prediction Curve
+       ========================= */
+    function renderPredictionCurve(yScale = "linear") {
+      const fciByMonth = new Map(globalData.map(d => [d.date.slice(0,7), +d[fciKey]]));
+      const joined = BTC_SERIES
+        .filter(r => fciByMonth.has(r.month))
+        .map(r => ({ f: fciByMonth.get(r.month), btc: r.price, m: r.month }))
+        .sort((a,b) => a.f - b.f);
+
+      const pts = {
+        x: joined.map(d => d.f),
+        y: joined.map(d => d.btc),
+        text: joined.map(d => d.m),
+        type: "scatter",
+        mode: "markers",
+        name: "Data",
+        marker: { symbol: "x", size: 9 }
+      };
+
+      const fMin = -2, fMax = 2, steps = 400;
+      const fx = [], fy = [];
+      for (let i = 0; i <= steps; i++) {
+        const f = fMin + (fMax - fMin) * i / steps;
+        fx.push(f); fy.push(predFn(f));
+      }
+      const curve = { x: fx, y: fy, type: "scatter", mode: "lines", name: "Predicted mean BTC" };
+
+      const lx = [], ly = [], lt = [];
+      for (let f = fMin; f <= fMax + 1e-9; f += 0.25) {
+        const ff = +f.toFixed(2);
+        lx.push(ff); ly.push(predFn(ff)); lt.push(ff.toFixed(2));
+      }
+      const labels = {
+        x: lx, y: ly, text: lt,
+        type: "scatter", mode: "markers+text",
+        name: "FCI-G ticks",
+        textposition: "top center", textfont: { size: 10 },
+        marker: { size: 6, opacity: 0.7 }
+      };
+
+      Plotly.newPlot("plot_pred_curve", [pts, curve, labels], {
+        title: "BTC vs FCI-G: simple prediction curve (no bands)",
+        xaxis: { title: "FCI-G (full index)" },
+        yaxis: { title: "Bitcoin price (USD)", type: yScale },
+        legend: { orientation: "h" },
+        margin: { t: 60, r: 20, b: 60, l: 70 }
+      });
+    }
+
+    function initPredCurveUI() {
+      const sel = document.getElementById("pred-y-scale");
+      renderPredictionCurve(sel.value);
+      sel.addEventListener("change", () => renderPredictionCurve(sel.value));
     }
 
     // Start
