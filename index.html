@@ -5,72 +5,7 @@
 <meta charset="utf-8"/>
 <title>FCI-G Dashboard (Mobile-first)</title>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js">
-/* === BTC tooltip on pure FCI-G chart === */
-function drawFcigSolo(data){
-  const dates = data.map(d=>d.date);
-  const fci   = data.map(d=>+d[fciKey]);
-  const btc   = fci.map(predFn);
-  const trace = {
-    x: dates, y: fci, mode:"lines", name:"FCI‑G",
-    customdata: btc,
-    hovertemplate: "Data: %{x}<br>FCI‑G: %{y:.3f}<br><b>BTC* (model): %{customdata:,.0f} USD</b><extra></extra>"
-  };
-  const invisible = {
-    x:dates, y:btc, yaxis:"y2", mode:"lines", line:{width:0}, opacity:0, hoverinfo:"skip", showlegend:false
-  };
-  const y2range = [predFn(2.0)*0.95, predFn(-2.0)*1.05];
-
-  Plotly.newPlot("fcigSolo",[trace, invisible],{
-    margin:{t:30,r:80,b:60,l:60},
-    xaxis:{title:"Data",type:"date"},
-    yaxis:{title:"FCI‑G", zeroline:true},
-    yaxis2:{title:"BTC (USD, model)", overlaying:"y", side:"right", tickformat:",", range:y2range, showgrid:false},
-    hovermode:"x unified"
-  });
-  const badge = document.getElementById("fcigBadge");
-  const fig   = document.getElementById("fcigSolo");
-  fig.on('plotly_hover',(d)=>{ const v=d.points[0].customdata; badge.textContent="BTC*: "+v.toLocaleString(); });
-  fig.on('plotly_unhover',()=>{ badge.textContent="BTC*: —"; });
-}
-
-/* Hook into existing load/draw pipeline */
-const _old_drawCharts = drawCharts;
-drawCharts = function(data){
-  _old_drawCharts(data);
-  drawFcigSolo(data);
-};
-
-/* === Theme toggle (page + Plotly) === */
-(function(){
-  const btn = document.getElementById("themeToggle");
-  const root = document.documentElement;
-  const ids = ["chart1","chart1b","chart2","chart3","impactChart","corrRolling3m","simulationPlot","plot_pred_curve","fcigSolo"];
-  function applyTheme(t){
-    root.classList.toggle("dark", t==="dark");
-    localStorage.setItem("theme", t);
-    const isDark = t==="dark";
-    const paper = getComputedStyle(root).getPropertyValue("--card-bg").trim();
-    const fg    = getComputedStyle(root).getPropertyValue("--fg").trim();
-    const grid  = getComputedStyle(root).getPropertyValue("--border").trim();
-    ids.forEach(id=>{
-      const div=document.getElementById(id);
-      if(!div) return;
-      Plotly.relayout(id, {
-        paper_bgcolor: paper, plot_bgcolor: paper,
-        "font.color": fg,
-        "xaxis.gridcolor": grid, "yaxis.gridcolor": grid
-      });
-    });
-  }
-  const saved = localStorage.getItem("theme") || "light";
-  applyTheme(saved);
-  btn.addEventListener("click", ()=>{
-    const next = (document.documentElement.classList.contains("dark")) ? "light":"dark";
-    applyTheme(next);
-  });
-})();
-</script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
     :root{
       --card-bg:#fff;--shadow:0 10px 25px rgba(0,0,0,0.08);
@@ -169,7 +104,6 @@ body{ background:var(--bg); color:var(--fg); }
 </head>
 <body><button id="themeToggle" style="position:fixed;top:10px;right:10px;z-index:1000;border:1px solid #d1d5db;background:#fff;border-radius:10px;padding:6px 10px;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.12)" title="Przełącz jasny/ciemny">🌗</button>
 <div id="cardsContainer">
-
 <section class="card" data-id="card-fcigsolo">
 <div class="card-header">
 <h2>FCI‑G (tylko linia) — najeżdżaj, aby zobaczyć BTC (model)</h2>
@@ -207,7 +141,6 @@ body{ background:var(--bg); color:var(--fg); }
     </p>
 </div>
 </section>
-
 <section class="card" data-id="card-stacked">
 <div class="card-header">
 <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
@@ -330,7 +263,6 @@ body{ background:var(--bg); color:var(--fg); }
 <div id="plot_pred_curve"></div>
 </div>
 </section>
-
 <section class="card" data-id="card-sources">
 <div class="card-header">
 <h2>Źródła</h2>
@@ -630,5 +562,146 @@ body{ background:var(--bg); color:var(--fg); }
     // Boot
     loadData();
   </script>
-</body>
+<script>
+/* === BTC tooltip on pure FCI-G chart === */
+function drawFcigSolo(data){
+  const dates = data.map(d=>d.date);
+  const fci   = data.map(d=>+d[fciKey]);
+  const btc   = fci.map(predFn);
+  const trace = {
+    x: dates, y: fci, mode:"lines", name:"FCI‑G",
+    customdata: btc,
+    hovertemplate: "Data: %{x}<br>FCI‑G: %{y:.3f}<br><b>BTC* (model): %{customdata:,.0f} USD</b><extra></extra>"
+  };
+  const invisible = {
+    x:dates, y:btc, yaxis:"y2", mode:"lines", line:{width:0}, opacity:0, hoverinfo:"skip", showlegend:false
+  };
+  const y2range = [predFn(2.0)*0.95, predFn(-2.0)*1.05];
+
+  Plotly.newPlot("fcigSolo",[trace, invisible],{
+    margin:{t:30,r:80,b:60,l:60},
+    xaxis:{title:"Data",type:"date"},
+    yaxis:{title:"FCI‑G", zeroline:true},
+    yaxis2:{title:"BTC (USD, model)", overlaying:"y", side:"right", tickformat:",", range:y2range, showgrid:false},
+    hovermode:"x unified"
+  });
+  const badge = document.getElementById("fcigBadge");
+  const fig   = document.getElementById("fcigSolo");
+  fig.on('plotly_hover',(d)=>{ const v=d.points[0].customdata; badge.textContent="BTC*: "+v.toLocaleString(); });
+  fig.on('plotly_unhover',()=>{ badge.textContent="BTC*: —"; });
+}
+
+/* Hook into existing load/draw pipeline */
+const _old_drawCharts = drawCharts;
+drawCharts = function(data){
+  _old_drawCharts(data);
+  drawFcigSolo(data);
+};
+
+/* === Theme toggle (page + Plotly) === */
+(function(){
+  const btn = document.getElementById("themeToggle");
+  const root = document.documentElement;
+  const ids = ["chart1","chart1b","chart2","chart3","impactChart","corrRolling3m","simulationPlot","plot_pred_curve","fcigSolo"];
+  function applyTheme(t){
+    root.classList.toggle("dark", t==="dark");
+    localStorage.setItem("theme", t);
+    const isDark = t==="dark";
+    const paper = getComputedStyle(root).getPropertyValue("--card-bg").trim();
+    const fg    = getComputedStyle(root).getPropertyValue("--fg").trim();
+    const grid  = getComputedStyle(root).getPropertyValue("--border").trim();
+    ids.forEach(id=>{
+      const div=document.getElementById(id);
+      if(!div) return;
+      Plotly.relayout(id, {
+        paper_bgcolor: paper, plot_bgcolor: paper,
+        "font.color": fg,
+        "xaxis.gridcolor": grid, "yaxis.gridcolor": grid
+      });
+    });
+  }
+  const saved = localStorage.getItem("theme") || "light";
+  applyTheme(saved);
+  btn.addEventListener("click", ()=>{
+    const next = (document.documentElement.classList.contains("dark")) ? "light":"dark";
+    applyTheme(next);
+  });
+})();
+</script><script>
+// === Ensure globals from existing page ===
+window.predFn = window.predFn || (f => {
+  // fallback: simple BTC model (must be overwritten by main script if defined there)
+  const alpha = 10.996496662385686, beta = -1.1403503021295252, S = 1.0238973190689769;
+  return S * Math.exp(alpha + beta*f);
+});
+window.fciKey = window.fciKey || "FCI_G";
+
+function drawFcigSolo(data){
+  try {
+    const dates = data.map(d=>d.date || d.observation_date || d.Date || d[Object.keys(d)[0]]);
+    const fci   = data.map(d=>+d[window.fciKey]);
+    const btc   = fci.map(window.predFn);
+    const trace = {
+      x: dates, y: fci, mode:"lines", name:"FCI‑G",
+      customdata: btc,
+      hovertemplate: "Data: %{x}<br>FCI‑G: %{y:.3f}<br><b>BTC* (model): %{customdata:,.0f} USD</b><extra></extra>"
+    };
+    const invisible = {
+      x:dates, y:btc, yaxis:"y2", mode:"lines", line:{width:0}, opacity:0, hoverinfo:"skip", showlegend:false
+    };
+    const y2range = [window.predFn(2.0)*0.95, window.predFn(-2.0)*1.05];
+    Plotly.newPlot("fcigSolo",[trace, invisible],{
+      margin:{t:30,r:80,b:60,l:60},
+      xaxis:{title:"Data",type:"date"},
+      yaxis:{title:"FCI‑G", zeroline:true},
+      yaxis2:{title:"BTC (USD, model)", overlaying:"y", side:"right", tickformat:",", range:y2range, showgrid:false},
+      hovermode:"x unified"
+    });
+    const badge = document.getElementById("fcigBadge");
+    const fig   = document.getElementById("fcigSolo");
+    fig.on('plotly_hover',(d)=>{ const v=d.points[0].customdata; badge.textContent="BTC*: "+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v)+" USD"; });
+    fig.on('plotly_unhover',()=>{ badge.textContent="BTC*: —"; });
+  } catch(e){ console.error("drawFcigSolo error", e); }
+}
+
+// Hook into existing drawCharts if present
+(function(){
+  const old = window.drawCharts;
+  window.drawCharts = function(data){
+    try{ if(typeof old === "function") old(data); }catch(e){ console.warn(e); }
+    try{ drawFcigSolo(data); }catch(e){ console.warn(e); }
+  }
+})();
+
+// Theme toggle for entire page + Plotly charts
+(function(){
+  const btn = document.getElementById("themeToggle");
+  const root = document.documentElement;
+  const ids = ["chart1","chart1b","chart2","chart3","impactChart","corrRolling3m","simulationPlot","plot_pred_curve","fcigSolo"];
+  function applyTheme(t){
+    root.classList.toggle("dark", t==="dark");
+    localStorage.setItem("theme", t);
+    const paper = getComputedStyle(root).getPropertyValue("--card-bg") || getComputedStyle(root).getPropertyValue("--bg");
+    const fg    = getComputedStyle(root).getPropertyValue("--fg");
+    const grid  = getComputedStyle(root).getPropertyValue("--border") || "#e5e7eb";
+    ids.forEach(id=>{
+      const div=document.getElementById(id);
+      if(!div) return;
+      Plotly.relayout(id, {
+        paper_bgcolor: paper.trim(), plot_bgcolor: paper.trim(),
+        "font.color": fg.trim(),
+        "xaxis.gridcolor": grid.trim(), "yaxis.gridcolor": grid.trim()
+      });
+    });
+  }
+  const saved = localStorage.getItem("theme") || "light";
+  applyTheme(saved);
+  if(btn){
+    btn.addEventListener("click", ()=>{
+      const next = (document.documentElement.classList.contains("dark")) ? "light":"dark";
+      applyTheme(next);
+    });
+  }
+})();
+</script><footer id="siteFooter" style="margin-top:18px;padding:12px 0;color:#6b7280;font-size:13px;text-align:center;border-top:1px solid var(--border)">Źródło opisu FCI‑G: <a href="https://www.federalreserve.gov/econres/notes/feds-notes/a-new-index-to-measure-us-financial-conditions-20230630.html" rel="noopener" target="_blank">FEDS Notes — A New Index to Measure U.S. Financial Conditions</a></footer></body>
 </html>
