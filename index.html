@@ -2,178 +2,151 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>FCI-G Dashboard</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <title>FCI-G Dashboard (Mobile-first)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
-    :root{--card-bg:#fff;--shadow:0 10px 25px rgba(0,0,0,0.1);}
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #eef2ff, #e0f2fe);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-      gap: 20px;
+    :root{
+      --card-bg:#fff;--shadow:0 10px 25px rgba(0,0,0,0.08);
+      --pad:14px;
     }
-    #cardsContainer {
-      width: 100%;
-      max-width: 1200px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: #f7fafc;
+      color:#111827;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      padding:12px;
     }
-    .card {
-      background: var(--card-bg);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
+    #cardsContainer{
+      width:100%;
+      max-width:1000px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
     }
-    .card.dragging { opacity: 0.6; }
-    .card-placeholder {
-      border: 2px dashed #9ca3af;
-      border-radius: 18px;
-      height: 60px;
-      background: rgba(156,163,175,0.08);
+    .card{
+      background:var(--card-bg);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      touch-action: manipulation; /* keep taps snappy */
+    }
+    .card.dragging{
+      opacity:.95;
+      z-index: 5;
+    }
+    .card-placeholder{
+      border:2px dashed #cbd5e1;
+      border-radius:16px;
+      background: #f1f5f9;
+      height:60px;
+      margin:0;
+    }
+    .card-header{
+      display:flex; align-items:center; gap:10px;
+      padding: var(--pad);
+      background:#f1f5f9;
+      border-bottom:1px solid #e5e7eb;
+      user-select:none;
+    }
+    .card-header h2{
+      margin:0; font-size:16px; line-height:1.2; flex:1; font-weight:600;
+    }
+    .card-controls{display:flex; gap:8px; align-items:center;}
+    .btn, .drag-handle{
+      border:1px solid #d1d5db; background:#fff;
+      border-radius:10px; padding:6px 10px; font-size:13px; cursor:pointer;
+    }
+    .btn:active, .drag-handle:active{transform: scale(0.98)}
+    .drag-handle{font-weight:700; cursor:grab; touch-action:none;}
+    .card-body{padding: var(--pad); background:#fff;}
+    .card.collapsed .card-body{display:none}
+    .card.collapsed .btn-collapse::after{content:"▸"}
+    .btn-collapse::after{content:"▾"}
+
+    /* Charts sizing: mobile-first */
+    #chart1,#chart1b,#chart2,#chart3,#impactChart{width:100%; height:420px}
+    #corrRolling3m,#simulationPlot,#plot_pred_curve{width:100%; height:360px}
+
+    .controls{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px}
+    .controls input, .controls select, .controls button{
+      padding:6px 9px; border:1px solid #d1d5db; border-radius:8px; background:#fff; font-size:14px
     }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 16px;
-      background: #f3f4f6;
-      border-bottom: 1px solid #e5e7eb;
-      cursor: default;
+    /* Larger screens */
+    @media (min-width: 700px){
+      :root{--pad:16px}
+      #chart1,#chart1b,#chart2,#chart3,#impactChart{height:520px}
+      #corrRolling3m,#simulationPlot,#plot_pred_curve{height:420px}
+      .card-header h2{font-size:18px}
     }
-    .card-header h2 {
-      margin: 0;
-      font-size: 18px;
-      color: #111827;
-      flex: 1;
-    }
-    .card-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .btn, .drag-handle {
-      border: 1px solid #d1d5db;
-      background: #fff;
-      border-radius: 8px;
-      padding: 6px 10px;
-      cursor: pointer;
-      user-select: none;
-      font-size: 13px;
-    }
-    .btn:hover { background: #f3f4f6; }
-    .drag-handle { cursor: move; font-weight: 700; }
-    .card-body { padding: 16px; }
-
-    .card.collapsed .card-body { display: none; }
-    .card.collapsed .btn-collapse::after { content: "▸"; }
-    .btn-collapse::after { content: "▾"; }
-
-    /* Wysokości wykresów */
-    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
-    #corrRolling3m, #simulationPlot, #plot_pred_curve { width: 100%; height: 460px; }
-
-    /* Formularze/sterowanie */
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 15px;
-      align-items: center;
-    }
-    .controls input, .controls select, .controls button {
-      padding: 6px 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      background: #fff;
-      cursor: pointer;
-    }
-    .controls button:hover { background: #f3f4f6; }
-    .date-controls { display: flex; gap: 10px; align-items: center; }
   </style>
 </head>
 <body>
 
   <div id="cardsContainer">
-    <!-- 1 -->
     <section class="card" data-id="card-stacked">
       <div class="card-header">
         <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
-      <div class="card-body">
-        <div id="chart1"></div>
-      </div>
+      <div class="card-body"><div id="chart1"></div></div>
     </section>
 
-    <!-- 2 -->
     <section class="card" data-id="card-lines">
       <div class="card-header">
         <h2>Komponenty i FCI-G (linie)</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
-      <div class="card-body">
-        <div id="chart1b"></div>
-      </div>
+      <div class="card-body"><div id="chart1b"></div></div>
     </section>
 
-    <!-- 3 -->
     <section class="card" data-id="card-shares">
       <div class="card-header">
         <h2>Procentowy udział komponentów w FCI-G</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
-      <div class="card-body">
-        <div id="chart2"></div>
-      </div>
+      <div class="card-body"><div id="chart2"></div></div>
     </section>
 
-    <!-- 4 -->
     <section class="card" data-id="card-history-shares">
       <div class="card-header">
         <h2>Historyczne udziały komponentów</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
-      <div class="card-body">
-        <div id="chart3"></div>
-      </div>
+      <div class="card-body"><div id="chart3"></div></div>
     </section>
 
-    <!-- 5 -->
     <section class="card" data-id="card-impact">
       <div class="card-header">
         <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
         <div class="controls">
-          <div class="date-controls">
-            <label>Od: <input type="date" id="startDate" /></label>
-            <label>Do: <input type="date" id="endDate" /></label>
-            <button onclick="applyRange()">Zastosuj</button>
-          </div>
+          <label>Od: <input type="date" id="startDate" /></label>
+          <label>Do: <input type="date" id="endDate" /></label>
+          <button onclick="applyRange()">Zastosuj</button>
           <button onclick="quickRange('ytd')">YTD</button>
           <button onclick="quickRange(1)">1Y</button>
           <button onclick="quickRange(3)">3Y</button>
@@ -184,22 +157,20 @@
       </div>
     </section>
 
-    <!-- 6 -->
     <section class="card" data-id="card-corr">
       <div class="card-header">
         <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
         <div class="controls">
           <label>Od: <input type="month" id="corrFrom" /></label>
           <label>Do: <input type="month" id="corrTo" /></label>
-          <label style="display:flex; gap:6px; align-items:center;">
-            <input type="checkbox" id="useChanges" checked />
-            Użyj zmian (ΔFCI-G vs log-zwroty BTC)
+          <label style="display:flex;gap:6px;align-items:center;">
+            <input type="checkbox" id="useChanges" checked /> Użyj zmian (ΔFCI-G vs log-zwroty BTC)
           </label>
           <button id="corrRun">Oblicz korelację</button>
           <div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
@@ -208,23 +179,18 @@
       </div>
     </section>
 
-    <!-- 7 -->
     <section class="card" data-id="card-sim">
       <div class="card-header">
         <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
         <div class="controls">
-          <label>Zakres FCI-G (min,max):
-            <input type="text" id="simRange" value="-3,3" />
-          </label>
-          <label>FCI-G:
-            <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" />
-          </label>
+          <label>Zakres FCI-G (min,max): <input type="text" id="simRange" value="-3,3" /></label>
+          <label>FCI-G: <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" /></label>
           <div><strong>BTC:</strong> <span id="simOut">—</span></div>
           <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
         </div>
@@ -232,13 +198,12 @@
       </div>
     </section>
 
-    <!-- 8 -->
     <section class="card" data-id="card-predcurve">
       <div class="card-header">
         <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
         <div class="card-controls">
           <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
-          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
@@ -297,514 +262,246 @@
       { month: "2025-06", price: 105711.78 },
       { month: "2025-07", price: 113248.73 },
     ];
-
-    // Model z Duan smearing: BTC(f) = A * exp(k*f)
     const MODEL = { A: 61090.941, k: -1.14035, dataRange: [-0.78, 1.00] };
     const predFn = (f) => MODEL.A * Math.exp(MODEL.k * f);
 
-    /* =========================
-       Pomocnicze
-       ========================= */
-    const toMonthKey = (iso) => iso.split("-").slice(0, 2).join("-");
-    function correlation(x, y) {
-      const n = x.length;
-      const mx = x.reduce((s, v) => s + v, 0) / n;
-      const my = y.reduce((s, v) => s + v, 0) / n;
-      let num = 0, dx = 0, dy = 0;
-      for (let i = 0; i < n; i++) {
-        const xa = x[i] - mx, yb = y[i] - my;
-        num += xa * yb; dx += xa * xa; dy += yb * yb;
-      }
-      return num / Math.sqrt(dx * dy);
-    }
-    function rollingCorrelation(a, b, window) {
-      const out = new Array(a.length).fill(null);
-      for (let i = window - 1; i < a.length; i++) {
-        const A = a.slice(i - window + 1, i + 1);
-        const B = b.slice(i - window + 1, i + 1);
-        const ma = A.reduce((s, v) => s + v, 0) / window;
-        const mb = B.reduce((s, v) => s + v, 0) / window;
-        let num = 0, da = 0, db = 0;
-        for (let j = 0; j < window; j++) {
-          const xa = A[j] - ma, yb = B[j] - mb;
-          num += xa * yb; da += xa * xa; db += yb * yb;
-        }
-        out[i] = (da > 0 && db > 0) ? num / Math.sqrt(da * db) : null;
-      }
-      return out;
+    /* Helpers */
+    const toMonthKey = (iso) => iso.split("-").slice(0,2).join("-");
+    function correlation(x,y){const n=x.length,mx=x.reduce((s,v)=>s+v,0)/n,my=y.reduce((s,v)=>s+v,0)/n;let num=0,dx=0,dy=0;for(let i=0;i<n;i++){const xa=x[i]-mx,yb=y[i]-my;num+=xa*yb;dx+=xa*xa;dy+=yb*yb;}return num/Math.sqrt(dx*dy);}
+    function rollingCorrelation(a,b,w){const out=new Array(a.length).fill(null);for(let i=w-1;i<a.length;i++){const A=a.slice(i-w+1,i+1),B=b.slice(i-w+1,i+1);const ma=A.reduce((s,v)=>s+v,0)/w,mb=B.reduce((s,v)=>s+v,0)/w;let num=0,da=0,db=0;for(let j=0;j<w;j++){const xa=A[j]-ma,yb=B[j]-mb;num+=xa*yb;da+=xa*xa;db+=yb*yb;}out[i]=(da>0&&db>0)?num/Math.sqrt(da*db):null;}return out;}
+
+    /* Dashboard */
+    let globalData=[];
+    const fciKey="FCI-G Index (baseline)";
+    const componentKeys=["FFR","10Yr Treasury","Mortgage Rate","BBB","Stock Market","House Prices","Dollar"];
+
+    async function loadData(){
+      const res=await fetch("./data/converted.json");
+      const data=await res.json(); globalData=data;
+      document.getElementById("startDate").value=data[0].date;
+      document.getElementById("endDate").value=data[data.length-1].date;
+      drawCharts(data); updateImpact(data[0].date,data[data.length-1].date);
+      initCorrelationComponent(); initSimulationComponent(); initPredCurveUI();
+      enableMobileDnD(); restoreCardState();
     }
 
-    /* =========================
-       Dashboard główny
-       ========================= */
-    let globalData = [];
-    const fciKey = "FCI-G Index (baseline)";
-    const componentKeys = ["FFR","10Yr Treasury","Mortgage Rate","BBB","Stock Market","House Prices","Dollar"];
+    function drawCharts(data){
+      const traces1=componentKeys.map(k=>({x:data.map(d=>d.date),y:data.map(d=>+d[k]),name:k,type:"bar",opacity:0.9}));
+      const fciLine={x:data.map(d=>d.date),y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
+      Plotly.newPlot("chart1",[...traces1,fciLine],{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
 
-    async function loadData() {
-      const res = await fetch("./data/converted.json");
-      const data = await res.json();
-      globalData = data;
+      const traces1b=componentKeys.map(k=>({x:data.map(d=>d.date),y:data.map(d=>+d[k]),mode:"lines",name:k}));
+      const fciLine2={x:data.map(d=>d.date),y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
+      Plotly.newPlot("chart1b",[...traces1b,fciLine2],{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
 
-      document.getElementById("startDate").value = data[0].date;
-      document.getElementById("endDate").value = data[data.length - 1].date;
+      const percentData=data.map(d=>{const values=componentKeys.map(k=>Math.abs(+d[k]));const total=values.reduce((a,b)=>a+b,0);const shares={};componentKeys.forEach((k,i)=>{shares[k]=total>0?(values[i]/total*100):0});return{date:d.date,...shares};});
+      const traces2=componentKeys.map(k=>({x:percentData.map(d=>d.date),y:percentData.map(d=>d[k]),name:k,type:"bar"}));
+      Plotly.newPlot("chart2",traces2,{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
 
-      drawCharts(data);
-      updateImpact(data[0].date, data[data.length - 1].date);
-
-      initCorrelationComponent();
-      initSimulationComponent();
-      initPredCurveUI();
-      enableDragAndDrop();   // <— aktywuj DnD i zwijanie po inicjalizacji
-      restoreCardState();    // <— odtwórz kolejność i zwinięcia
+      const traces3=componentKeys.map(k=>({x:percentData.map(d=>d.date),y:percentData.map(d=>d[k]),mode:"lines",name:k}));
+      Plotly.newPlot("chart3",traces3,{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
     }
 
-    function drawCharts(data) {
-      // Chart 1: stacked bars + FCI-G
-      const traces1 = componentKeys.map((key) => ({
-        x: data.map(d => d.date),
-        y: data.map(d => +d[key]),
-        name: key,
-        type: "bar",
-        opacity: 0.9
-      }));
-      const fciLine = {
-        x: data.map(d => d.date),
-        y: data.map(d => +d[fciKey]),
-        mode: "lines",
-        name: "FCI-G Index (baseline)",
-        line: { color: "#111827", width: 3 }
-      };
-      Plotly.newPlot("chart1", [...traces1, fciLine], {
-        barmode: "stack",
-        xaxis: { tickangle: -45, automargin: true },
-        yaxis: { title: "Value" },
-        legend: { orientation: "h", y: -0.3 },
-        margin: { t: 40, r: 20, l: 50, b: 100 },
-        hovermode: "x unified"
-      });
-
-      // Chart 1b: lines
-      const traces1b = componentKeys.map((key) => ({
-        x: data.map(d => d.date),
-        y: data.map(d => +d[key]),
-        mode: "lines",
-        name: key
-      }));
-      const fciLine2 = {
-        x: data.map(d => d.date),
-        y: data.map(d => +d[fciKey]),
-        mode: "lines",
-        name: "FCI-G Index (baseline)",
-        line: { color: "#111827", width: 3 }
-      };
-      Plotly.newPlot("chart1b", [...traces1b, fciLine2], {
-        xaxis: { tickangle: -45, automargin: true },
-        yaxis: { title: "Value" },
-        legend: { orientation: "h", y: -0.3 },
-        margin: { t: 40, r: 20, l: 50, b: 100 },
-        hovermode: "x unified"
-      });
-
-      // Chart 2: percent shares
-      const percentData = data.map(d => {
-        const values = componentKeys.map(k => Math.abs(+d[k]));
-        const total = values.reduce((a,b)=>a+b, 0);
-        const shares = {};
-        componentKeys.forEach((k, i) => { shares[k] = total > 0 ? (values[i] / total * 100) : 0; });
-        return { date: d.date, ...shares };
-      });
-      const traces2 = componentKeys.map((key) => ({
-        x: percentData.map(d => d.date),
-        y: percentData.map(d => d[key]),
-        name: key,
-        type: "bar"
-      }));
-      Plotly.newPlot("chart2", traces2, {
-        barmode: "stack",
-        xaxis: { tickangle: -45, automargin: true },
-        yaxis: { title: "Share (%)", range: [0, 100] },
-        legend: { orientation: "h", y: -0.3 },
-        margin: { t: 40, r: 20, l: 50, b: 100 },
-        hovermode: "x unified"
-      });
-
-      // Chart 3: percent shares (lines)
-      const traces3 = componentKeys.map((key) => ({
-        x: percentData.map(d => d.date),
-        y: percentData.map(d => d[key]),
-        mode: "lines",
-        name: key
-      }));
-      Plotly.newPlot("chart3", traces3, {
-        xaxis: { tickangle: -45, automargin: true },
-        yaxis: { title: "Share (%)", range: [0, 100] },
-        legend: { orientation: "h", y: -0.3 },
-        margin: { t: 40, r: 20, l: 50, b: 100 },
-        hovermode: "x unified"
-      });
+    function updateImpact(startDate,endDate){
+      const data=globalData.filter(d=>d.date>=startDate&&d.date<=endDate); if(data.length<2)return;
+      const s=data[0], e=data[data.length-1];
+      const contrib=[{component:fciKey,delta:+e[fciKey]-+s[fciKey]},...componentKeys.map(k=>({component:k,delta:+e[k]-+s[k]}))].sort((a,b)=>a.delta-b.delta);
+      const trace={type:"bar",x:contrib.map(c=>c.delta),y:contrib.map(c=>c.component),orientation:"h",text:contrib.map(c=>c.delta.toFixed(3)),textposition:"outside",
+        marker:{color:contrib.map(c=>c.delta>0?"rgba(220,38,38,.85)":(c.delta<0?"rgba(5,150,105,.85)":"rgba(107,114,128,.85)"))}};
+      Plotly.newPlot("impactChart",[trace],{title:`Zmiana poziomu indeksu i komponentów (${s.date} → ${e.date})`,xaxis:{title:"Δ (punkty indeksowe)"},margin:{t:80,r:20,l:150,b:50}});
     }
-
-    function updateImpact(startDate, endDate) {
-      const data = globalData.filter(d => d.date >= startDate && d.date <= endDate);
-      if (data.length < 2) return;
-      const start = data[0];
-      const end = data[data.length - 1];
-
-      const contributions = [
-        { component: fciKey, delta: +end[fciKey] - +start[fciKey] },
-        ...componentKeys.map(k => ({ component: k, delta: +end[k] - +start[k] }))
-      ].sort((a, b) => a.delta - b.delta);
-
-      const trace = {
-        type: "bar",
-        x: contributions.map(c => c.delta),
-        y: contributions.map(c => c.component),
-        orientation: "h",
-        text: contributions.map(c => c.delta.toFixed(3)),
-        textposition: "outside",
-        marker: {
-          color: contributions.map(c =>
-            c.delta > 0 ? "rgba(220,38,38,0.8)" :
-            (c.delta < 0 ? "rgba(5,150,105,0.8)" : "rgba(107,114,128,0.8)")
-          )
-        }
-      };
-
-      Plotly.newPlot("impactChart", [trace], {
-        title: `Zmiana poziomu indeksu i komponentów (${start.date} → ${end.date})`,
-        xaxis: { title: "Δ (punkty indeksowe)" },
-        margin: { t: 80, r: 30, l: 160, b: 60 }
-      });
-    }
-
-    function quickRange(years) {
-      const data = globalData;
-      if (!data.length) return;
-      const endDate = data[data.length - 1].date;
-
-      if (years === "all") {
-        document.getElementById("startDate").value = data[0].date;
-        document.getElementById("endDate").value = endDate;
-      } else if (years === "ytd") {
-        const end = new Date(endDate);
-        const start = new Date(end.getFullYear(), 0, 1);
-        const startDate = data.find(d => new Date(d.date) >= start);
-        document.getElementById("startDate").value = startDate ? startDate.date : data[0].date;
-        document.getElementById("endDate").value = endDate;
-      } else {
-        const end = new Date(endDate);
-        const start = new Date(end);
-        start.setFullYear(start.getFullYear() - years);
-        const startDate = data.find(d => new Date(d.date) >= start);
-        document.getElementById("startDate").value = startDate ? startDate.date : data[0].date;
-        document.getElementById("endDate").value = endDate;
-      }
+    function quickRange(years){
+      const data=globalData; if(!data.length)return; const endDate=data[data.length-1].date;
+      if(years==="all"){startDate.value=data[0].date; endDateEl.value=endDate;}
+      else if(years==="ytd"){const ed=new Date(endDate);const st=new Date(ed.getFullYear(),0,1);const sd=data.find(d=>new Date(d.date)>=st); startDate.value=sd?sd.date:data[0].date; endDateEl.value=endDate;}
+      else{const ed=new Date(endDate);const st=new Date(ed);st.setFullYear(st.getFullYear()-years);const sd=data.find(d=>new Date(d.date)>=st); startDate.value=sd?sd.date:data[0].date; endDateEl.value=endDate;}
       applyRange();
     }
-    function applyRange() {
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-      updateImpact(startDate, endDate);
-    }
+    function applyRange(){updateImpact(startDate.value,endDateEl.value)}
+    const startDate=document.getElementById("startDate");
+    const endDateEl=document.getElementById("endDate");
 
-    /* =========================
-       NOWY #1: Korelacja + 3M rolling
-       ========================= */
-    function initCorrelationComponent() {
-      const fciByMonth = new Map(globalData.map(d => [toMonthKey(d.date), +d[fciKey]]));
-      const joined = BTC_SERIES
-        .filter(r => fciByMonth.has(r.month))
-        .map(r => ({ month: r.month, fcig: fciByMonth.get(r.month), btc: r.price }))
-        .sort((a, b) => a.month.localeCompare(b.month));
-
-      const elFrom = document.getElementById("corrFrom");
-      const elTo   = document.getElementById("corrTo");
-      elFrom.value = joined[0].month;
-      elTo.value   = joined[joined.length - 1].month;
-
-      const elUse = document.getElementById("useChanges");
-      const elBtn = document.getElementById("corrRun");
-      const elOut = document.getElementById("corrValue");
-
-      function toChanges(arr) {
-        const out = [];
-        for (let i = 1; i < arr.length; i++) {
-          const prev = arr[i - 1], cur = arr[i];
-          out.push({
-            month: cur.month,
-            d_fcig: cur.fcig - prev.fcig,
-            r_btc: Math.log(cur.btc / prev.btc)
-          });
-        }
-        return out;
-      }
-
-      function drawRolling(x, y) {
-        Plotly.newPlot("corrRolling3m", [{
-          x, y, mode: "lines", name: "3M rolling"
-        }], {
-          title: "Korelacja krocząca 3M",
-          yaxis: { range: [-1, 1] },
-          xaxis: { title: "Miesiąc" }
-        });
-      }
-
-      function run() {
-        const from = elFrom.value;
-        const to   = elTo.value;
-        let arr = joined.filter(d => (!from || d.month >= from) && (!to || d.month <= to));
-
-        if (elUse.checked) {
-          const ch = toChanges(arr);
-          if (ch.length < 3) {
-            elOut.textContent = "—";
-            drawRolling(ch.map(d => d.month), []);
-            return;
-          }
-          const corr = correlation(ch.map(d => d.d_fcig), ch.map(d => d.r_btc));
-          elOut.textContent = corr.toFixed(3);
-          const roll = rollingCorrelation(ch.map(d => d.d_fcig), ch.map(d => d.r_btc), 3);
-          drawRolling(ch.map(d => d.month), roll);
-        } else {
-          if (arr.length < 3) {
-            elOut.textContent = "—";
-            drawRolling(arr.map(d => d.month), []);
-            return;
-          }
-          const corr = correlation(arr.map(d => d.fcig), arr.map(d => d.btc));
-          elOut.textContent = corr.toFixed(3);
-          const roll = rollingCorrelation(arr.map(d => d.fcig), arr.map(d => d.btc), 3);
-          drawRolling(arr.map(d => d.month), roll);
+    /* Correlation component */
+    function initCorrelationComponent(){
+      const fciByMonth=new Map(globalData.map(d=>[toMonthKey(d.date),+d[fciKey]]));
+      const joined=BTC_SERIES.filter(r=>fciByMonth.has(r.month)).map(r=>({month:r.month,fcig:fciByMonth.get(r.month),btc:r.price})).sort((a,b)=>a.month.localeCompare(b.month));
+      corrFrom.value=joined[0].month; corrTo.value=joined[joined.length-1].month;
+      function toChanges(arr){const out=[];for(let i=1;i<arr.length;i++){const p=arr[i-1],c=arr[i];out.push({month:c.month,d_fcig:c.fcig-p.fcig,r_btc:Math.log(c.btc/p.btc)});}return out;}
+      function drawRolling(x,y){Plotly.newPlot("corrRolling3m",[{x,y,mode:"lines",name:"3M rolling"}],{title:"Korelacja krocząca 3M",yaxis:{range:[-1,1]},xaxis:{title:"Miesiąc"}});}
+      function run(){
+        const from=corrFrom.value, to=corrTo.value;
+        let arr=joined.filter(d=>(!from||d.month>=from)&&(!to||d.month<=to));
+        if(useChanges.checked){
+          const ch=toChanges(arr); if(ch.length<3){corrValue.textContent="—"; drawRolling(ch.map(d=>d.month),[]); return;}
+          const corr=correlation(ch.map(d=>d.d_fcig),ch.map(d=>d.r_btc)); corrValue.textContent=corr.toFixed(3);
+          const roll=rollingCorrelation(ch.map(d=>d.d_fcig),ch.map(d=>d.r_btc),3); drawRolling(ch.map(d=>d.month),roll);
+        }else{
+          if(arr.length<3){corrValue.textContent="—"; drawRolling(arr.map(d=>d.month),[]); return;}
+          const corr=correlation(arr.map(d=>d.fcig),arr.map(d=>d.btc)); corrValue.textContent=corr.toFixed(3);
+          const roll=rollingCorrelation(arr.map(d=>d.fcig),arr.map(d=>d.btc),3); drawRolling(arr.map(d=>d.month),roll);
         }
       }
-
-      elBtn.addEventListener("click", run);
-      run(); // pierwszy render
+      corrRun.addEventListener("click",run); run();
     }
 
-    /* =========================
-       NOWY #2: Symulacja BTC = A·e^{k·f}
-       ========================= */
-    function initSimulationComponent() {
-      const elRange  = document.getElementById("simRange");
-      const elSlider = document.getElementById("simSlider");
-      const elOut    = document.getElementById("simOut");
-
-      function fn(x) { return MODEL.A * Math.exp(MODEL.k * x); }
-
-      function currentRange() {
-        const [a, b] = elRange.value.split(",").map(s => +s.trim());
-        const min = Number.isFinite(a) ? a : -3;
-        const max = Number.isFinite(b) ? b :  3;
-        elSlider.min = String(min);
-        elSlider.max = String(max);
-        return [min, max];
+    /* Simulation */
+    function initSimulationComponent(){
+      const fn=(x)=> MODEL.A * Math.exp(MODEL.k * x);
+      function currentRange(){const [a,b]=simRange.value.split(",").map(s=>+s.trim()); const min=Number.isFinite(a)?a:-3; const max=Number.isFinite(b)?b:3; simSlider.min=String(min); simSlider.max=String(max); return[min,max];}
+      function renderPlot(sliderX){
+        const [min,max]=currentRange(), steps=220; const xs=[], ys=[];
+        for(let i=0;i<=steps;i++){const x=min+(max-min)*i/steps; xs.push(x); ys.push(fn(x));}
+        const curve={x:xs,y:ys,mode:"lines",name:"BTC = A·e^{k·f}"};
+        const point={x:[sliderX],y:[fn(sliderX)],mode:"markers",name:"Wybrany FCI-G"};
+        const shapes=[]; const [aMin,aMax]=MODEL.dataRange;
+        if(min<aMin)shapes.push({type:"rect",xref:"x",yref:"paper",x0:min,x1:aMin,y0:0,y1:1,fillcolor:"rgba(200,200,200,0.2)",line:{width:0}});
+        if(max>aMax)shapes.push({type:"rect",xref:"x",yref:"paper",x0:aMax,x1:max,y0:0,y1:1,fillcolor:"rgba(200,200,200,0.2)",line:{width:0}});
+        shapes.push({type:"line",x0:aMin,x1:aMin,y0:0,y1:1,xref:"x",yref:"paper",line:{dash:"dash",width:1}},{type:"line",x0:aMax,x1:aMax,y0:0,y1:1,xref:"x",yref:"paper",line:{dash:"dash",width:1}});
+        Plotly.newPlot("simulationPlot",[curve,point],{title:"Symulacja ceny BTC dla zadanego FCI-G",xaxis:{title:"FCI-G"},yaxis:{title:"BTC (USD)",type:"log"},shapes});
       }
-
-      function renderPlot(sliderX) {
-        const [min, max] = currentRange();
-        theSteps = 240;
-        const xs = [], ys = [];
-        for (let i = 0; i <= theSteps; i++) {
-          const x = min + (max - min) * i / theSteps;
-          xs.push(x); ys.push(fn(x));
-        }
-        const curve = { x: xs, y: ys, mode: "lines", name: "BTC = A·e^{k·f}" };
-        const point = { x: [sliderX], y: [fn(sliderX)], mode: "markers", name: "Wybrany FCI-G" };
-
-        const shapes = [];
-        const [aMin, aMax] = MODEL.dataRange;
-        if (min < aMin) shapes.push({ type:"rect", xref:"x", yref:"paper", x0:min, x1:aMin, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{ width:0 }});
-        if (max > aMax) shapes.push({ type:"rect", xref:"x", yref:"paper", x0:aMax, x1:max, y0:0, y1:1, fillcolor:"rgba(200,200,200,0.2)", line:{ width:0 }});
-        shapes.push(
-          { type:"line", x0:aMin, x1:aMin, y0:0, y1:1, xref:"x", yref:"paper", line:{ dash:"dash", width:1 }},
-          { type:"line", x0:aMax, x1:aMax, y0:0, y1:1, xref:"x", yref:"paper", line:{ dash:"dash", width:1 }}
-        );
-
-        Plotly.newPlot("simulationPlot", [curve, point], {
-          title: "Symulacja ceny BTC dla zadanego FCI-G",
-          xaxis: { title: "FCI-G" },
-          yaxis: { title: "BTC (USD)", type: "log" },
-          shapes
-        });
-      }
-
-      function updatePoint(x) {
-        Plotly.restyle("simulationPlot", { x: [[x]], y: [[fn(x)]] }, [1]);
-      }
-
-      elRange.value  = "-3,3";
-      elSlider.value = "0";
-      renderPlot(+elSlider.value);
-      elOut.textContent = fn(+elSlider.value).toLocaleString(undefined, { maximumFractionDigits: 2 });
-
-      elRange.addEventListener("change", () => renderPlot(+elSlider.value));
-      elSlider.addEventListener("input", () => {
-        const x = +elSlider.value;
-        updatePoint(x);
-        elOut.textContent = fn(x).toLocaleString(undefined, { maximumFractionDigits: 2 });
-      });
+      function updatePoint(x){Plotly.restyle("simulationPlot",{x:[[x]],y:[[fn(x)]]},[1])}
+      simRange.value="-3,3"; simSlider.value="0"; renderPlot(+simSlider.value);
+      simOut.textContent = fn(+simSlider.value).toLocaleString(undefined,{maximumFractionDigits:2});
+      simRange.addEventListener("change",()=>renderPlot(+simSlider.value));
+      simSlider.addEventListener("input",()=>{const x=+simSlider.value; updatePoint(x); simOut.textContent=fn(x).toLocaleString(undefined,{maximumFractionDigits:2});});
     }
 
-    /* =========================
-       NOWY #3: Prediction Curve
-       ========================= */
-    function renderPredictionCurve(yScale = "linear") {
-      const fciByMonth = new Map(globalData.map(d => [d.date.slice(0,7), +d[fciKey]]));
-      const joined = BTC_SERIES
-        .filter(r => fciByMonth.has(r.month))
-        .map(r => ({ f: fciByMonth.get(r.month), btc: r.price, m: r.month }))
-        .sort((a,b) => a.f - b.f);
-
-      const pts = {
-        x: joined.map(d => d.f),
-        y: joined.map(d => d.btc),
-        text: joined.map(d => d.m),
-        type: "scatter",
-        mode: "markers",
-        name: "Data",
-        marker: { symbol: "x", size: 9 }
-      };
-
-      const fMin = -2, fMax = 2, steps = 400;
-      const fx = [], fy = [];
-      for (let i = 0; i <= steps; i++) {
-        const f = fMin + (fMax - fMin) * i / steps;
-        fx.push(f); fy.push(predFn(f));
-      }
-      const curve = { x: fx, y: fy, type: "scatter", mode: "lines", name: "Predicted mean BTC" };
-
-      const lx = [], ly = [], lt = [];
-      for (let f = fMin; f <= fMax + 1e-9; f += 0.25) {
-        const ff = +f.toFixed(2);
-        lx.push(ff); ly.push(predFn(ff)); lt.push(ff.toFixed(2));
-      }
-      const labels = {
-        x: lx, y: ly, text: lt,
-        type: "scatter", mode: "markers+text",
-        name: "FCI-G ticks",
-        textposition: "top center", textfont: { size: 10 },
-        marker: { size: 6, opacity: 0.7 }
-      };
-
-      Plotly.newPlot("plot_pred_curve", [pts, curve, labels], {
-        title: "BTC vs FCI-G: simple prediction curve (no bands)",
-        xaxis: { title: "FCI-G (full index)" },
-        yaxis: { title: "Bitcoin price (USD)", type: yScale },
-        legend: { orientation: "h" },
-        margin: { t: 60, r: 20, b: 60, l: 70 }
-      });
+    /* Prediction curve */
+    function renderPredictionCurve(yScale="linear"){
+      const fciByMonth=new Map(globalData.map(d=>[d.date.slice(0,7),+d[fciKey]]));
+      const joined=BTC_SERIES.filter(r=>fciByMonth.has(r.month)).map(r=>({f:fciByMonth.get(r.month),btc:r.price,m:r.month})).sort((a,b)=>a.f-b.f);
+      const pts={x:joined.map(d=>d.f),y:joined.map(d=>d.btc),text:joined.map(d=>d.m),type:"scatter",mode:"markers",name:"Data",marker:{symbol:"x",size:9}};
+      const fMin=-2,fMax=2,steps=400,fx=[],fy=[]; for(let i=0;i<=steps;i++){const f=fMin+(fMax-fMin)*i/steps; fx.push(f); fy.push(predFn(f));}
+      const curve={x:fx,y:fy,type:"scatter",mode:"lines",name:"Predicted mean BTC"};
+      const lx=[],ly=[],lt=[]; for(let f=fMin; f<=fMax+1e-9; f+=0.25){const ff=+f.toFixed(2); lx.push(ff); ly.push(predFn(ff)); lt.push(ff.toFixed(2));}
+      const labels={x:lx,y:ly,text:lt,type:"scatter",mode:"markers+text",name:"FCI-G ticks",textposition:"top center",textfont:{size:10},marker:{size:6,opacity:.7}};
+      Plotly.newPlot("plot_pred_curve",[pts,curve,labels],{title:"BTC vs FCI-G: simple prediction curve (no bands)",xaxis:{title:"FCI-G (full index)"},yaxis:{title:"Bitcoin price (USD)",type:yScale},legend:{orientation:"h"},margin:{t:60,r:20,b:50,l:60}});
+    }
+    function initPredCurveUI(){
+      const sel=document.getElementById("pred-y-scale"); renderPredictionCurve(sel.value); sel.addEventListener("change",()=>renderPredictionCurve(sel.value));
     }
 
-    function initPredCurveUI() {
-      const sel = document.getElementById("pred-y-scale");
-      renderPredictionCurve(sel.value);
-      sel.addEventListener("change", () => renderPredictionCurve(sel.value));
-    }
+    /* Mobile-first drag & drop (Pointer Events) */
+    const ORDER_KEY="fcig_cards_order";
+    const COLLAPSE_KEY="fcig_cards_collapsed";
+    function enableMobileDnD(){
+      const container=document.getElementById("cardsContainer");
+      const cards=[...container.querySelectorAll(".card")];
+      cards.forEach(card=>{
+        const handle=card.querySelector(".drag-handle");
+        if(!handle) return;
+        let dragging=false, startY=0, curY=0, placeholder=null, scrollLockY=0;
 
-    /* =========================
-       DRAG & DROP + ZWIJANIE
-       ========================= */
-    const ORDER_KEY = "fcig_cards_order";
-    const COLLAPSE_KEY = "fcig_cards_collapsed";
+        const onMove=(clientY)=>{
+          if(!dragging) return;
+          curY=clientY;
+          const dy=curY-startY;
+          card.style.transform=`translateY(${dy}px)`;
 
-    function enableDragAndDrop(){
-      const container = document.getElementById("cardsContainer");
-      const cards = Array.from(container.querySelectorAll(".card"));
-      cards.forEach(card => {
-        const handle = card.querySelector(".drag-handle");
-        card.setAttribute("draggable", "true");
+          // find insert position
+          const after=getAfterByY(container, clientY, card);
+          if(after==null) container.appendChild(placeholder);
+          else container.insertBefore(placeholder, after);
+        };
 
-        // drag only by handle
-        card.addEventListener("dragstart", (e) => {
-          if (!e.target.closest(".drag-handle")) { e.preventDefault(); return; }
-          card.classList.add("dragging");
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", card.dataset.id);
-        });
-        card.addEventListener("dragend", () => {
+        const pointerMove=(e)=>{ e.preventDefault(); onMove(e.clientY); };
+        const touchMove=(e)=>{ if(!dragging) return; e.preventDefault(); const t=e.touches[0]; onMove(t.clientY); };
+
+        const endDrag=()=>{
+          if(!dragging) return;
+          dragging=false;
           card.classList.remove("dragging");
+          card.style.transition="transform .12s ease";
+          card.style.transform="";
+          setTimeout(()=>{ card.style.transition=""; },130);
+          // place card
+          if(placeholder && placeholder.parentNode){
+            placeholder.parentNode.insertBefore(card, placeholder);
+            placeholder.remove();
+          }
           saveOrder();
+          // cleanup listeners
+          window.removeEventListener("pointermove", pointerMove, {passive:false});
+          window.removeEventListener("pointerup", endDrag);
+          window.removeEventListener("touchmove", touchMove, {passive:false});
+          window.removeEventListener("touchend", endDrag);
+          document.body.style.overscrollBehaviorY="";
+        };
+
+        const startDragAt=(clientY)=>{
+          dragging=true;
+          startY=clientY;
+          card.classList.add("dragging");
+          // placeholder
+          placeholder=document.createElement("div");
+          placeholder.className="card-placeholder";
+          placeholder.style.height=card.getBoundingClientRect().height+"px";
+          container.insertBefore(placeholder, card.nextSibling);
+          // lock scroll bounce on iOS
+          document.body.style.overscrollBehaviorY="contain";
+        };
+
+        // Support: pointer (mouse + pen), and touch (Safari)
+        handle.addEventListener("pointerdown",(e)=>{
+          // only left button if mouse
+          if(e.pointerType==="mouse" && e.button!==0) return;
+          e.preventDefault();
+          startDragAt(e.clientY);
+          window.addEventListener("pointermove", pointerMove, {passive:false});
+          window.addEventListener("pointerup", endDrag);
         });
+        // Fallback for old iOS: long-press touch
+        handle.addEventListener("touchstart",(e)=>{
+          const t=e.touches[0]; let longPress=true;
+          const pressTimer=setTimeout(()=>{
+            if(!longPress) return;
+            startDragAt(t.clientY);
+            window.addEventListener("touchmove", touchMove, {passive:false});
+            window.addEventListener("touchend", endDrag);
+          }, 120); // short press&hold
+          const cancel=()=>{ longPress=false; clearTimeout(pressTimer); };
+          handle.addEventListener("touchend", cancel, {once:true});
+          handle.addEventListener("touchmove", (ev)=>{ if(Math.abs(ev.touches[0].clientY - t.clientY) > 6) cancel(); }, {once:true});
+        }, {passive:true});
       });
 
-      container.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        const dragging = container.querySelector(".card.dragging");
-        if (!dragging) return;
-
-        const after = getDragAfterElement(container, e.clientY);
-        if (after == null) container.appendChild(dragging);
-        else container.insertBefore(dragging, after);
-      });
-
-      // collapse/expand
-      container.addEventListener("click", (e) => {
-        const btn = e.target.closest(".btn-collapse");
-        if (!btn) return;
-        const card = btn.closest(".card");
+      // Collapse toggle
+      container.addEventListener("click",(e)=>{
+        const btn=e.target.closest(".btn-collapse");
+        if(!btn) return;
+        const card=btn.closest(".card");
         card.classList.toggle("collapsed");
         saveCollapsed();
       });
     }
 
-    function getDragAfterElement(container, y) {
-      const elements = [...container.querySelectorAll(".card:not(.dragging)")];
-      return elements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-          return { offset: offset, element: child };
-        } else {
-          return closest;
-        }
-      }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+    function getAfterByY(container, y, draggingEl){
+      const els=[...container.querySelectorAll(".card:not(.dragging)")];
+      let closest={offset:Number.NEGATIVE_INFINITY, element:null};
+      for(const el of els){
+        const box=el.getBoundingClientRect();
+        const offset=y - box.top - box.height/2;
+        if(offset<0 && offset>closest.offset){ closest={offset, element:el}; }
+      }
+      return closest.element;
     }
-
     function saveOrder(){
-      const ids = [...document.querySelectorAll("#cardsContainer .card")].map(c => c.dataset.id);
+      const ids=[...document.querySelectorAll("#cardsContainer .card")].map(c=>c.dataset.id);
       localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
     }
     function saveCollapsed(){
-      const state = {};
-      document.querySelectorAll("#cardsContainer .card").forEach(c => state[c.dataset.id] = c.classList.contains("collapsed"));
+      const state={}; document.querySelectorAll("#cardsContainer .card").forEach(c=> state[c.dataset.id]=c.classList.contains("collapsed"));
       localStorage.setItem(COLLAPSE_KEY, JSON.stringify(state));
     }
     function restoreCardState(){
-      const container = document.getElementById("cardsContainer");
-
-      // restore order
-      const orderJson = localStorage.getItem(ORDER_KEY);
-      if (orderJson){
-        try {
-          const order = JSON.parse(orderJson);
-          order.forEach(id => {
-            const el = container.querySelector(`.card[data-id="${id}"]`);
-            if (el) container.appendChild(el);
-          });
-        } catch {}
-      }
-
-      // restore collapsed
-      const collJson = localStorage.getItem(COLLAPSE_KEY);
-      if (collJson){
-        try {
-          const state = JSON.parse(collJson);
-          Object.entries(state).forEach(([id, isCollapsed]) => {
-            const el = container.querySelector(`.card[data-id="${id}"]`);
-            if (el && isCollapsed) el.classList.add("collapsed");
-          });
-        } catch {}
-      }
-
-      // hook collapse buttons initial state save
-      document.querySelectorAll(".btn-collapse").forEach(btn => {
-        btn.addEventListener("click", () => saveCollapsed());
-      });
+      const container=document.getElementById("cardsContainer");
+      const orderJson=localStorage.getItem(ORDER_KEY);
+      if(orderJson){ try{ JSON.parse(orderJson).forEach(id=>{const el=container.querySelector(`.card[data-id="${id}"]`); if(el) container.appendChild(el); }); }catch{} }
+      const collJson=localStorage.getItem(COLLAPSE_KEY);
+      if(collJson){ try{ const state=JSON.parse(collJson); Object.entries(state).forEach(([id,isCol])=>{const el=container.querySelector(`.card[data-id="${id}"]`); if(el&&isCol) el.classList.add("collapsed");}); }catch{} }
     }
 
-    // Start
+    // Boot
     loadData();
   </script>
 </body>
