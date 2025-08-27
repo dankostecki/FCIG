@@ -6,6 +6,7 @@
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root{--card-bg:#fff;--shadow:0 10px 25px rgba(0,0,0,0.1);}
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -15,17 +16,71 @@
       align-items: center;
       min-height: 100vh;
       padding: 20px;
-      gap: 30px;
+      gap: 20px;
+    }
+    #cardsContainer {
+      width: 100%;
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
     }
     .card {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      padding: 20px 30px;
-      max-width: 1200px;
-      width: 100%;
+      background: var(--card-bg);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
-    h2 { margin: 0 0 10px; color: #111827; }
+    .card.dragging { opacity: 0.6; }
+    .card-placeholder {
+      border: 2px dashed #9ca3af;
+      border-radius: 18px;
+      height: 60px;
+      background: rgba(156,163,175,0.08);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: #f3f4f6;
+      border-bottom: 1px solid #e5e7eb;
+      cursor: default;
+    }
+    .card-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #111827;
+      flex: 1;
+    }
+    .card-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn, .drag-handle {
+      border: 1px solid #d1d5db;
+      background: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+    }
+    .btn:hover { background: #f3f4f6; }
+    .drag-handle { cursor: move; font-weight: 700; }
+    .card-body { padding: 16px; }
+
+    .card.collapsed .card-body { display: none; }
+    .card.collapsed .btn-collapse::after { content: "▸"; }
+    .btn-collapse::after { content: "▾"; }
+
+    /* Wysokości wykresów */
+    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
+    #corrRolling3m, #simulationPlot, #plot_pred_curve { width: 100%; height: 460px; }
+
+    /* Formularze/sterowanie */
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -34,102 +89,171 @@
       align-items: center;
     }
     .controls input, .controls select, .controls button {
-      padding: 6px 12px;
+      padding: 6px 10px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
-      background: #f9fafb;
+      background: #fff;
       cursor: pointer;
     }
-    .controls button:hover { background: #e5e7eb; }
+    .controls button:hover { background: #f3f4f6; }
     .date-controls { display: flex; gap: 10px; align-items: center; }
-    #chart1, #chart1b, #chart2, #chart3, #impactChart { width: 100%; height: 600px; }
-    #corrRolling3m, #simulationPlot, #plot_pred_curve { width: 100%; height: 460px; }
   </style>
 </head>
 <body>
-  <!-- Sekcje oryginalne -->
-  <div class="card">
-    <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
-    <div id="chart1"></div>
-  </div>
 
-  <div class="card">
-    <h2>Komponenty i FCI-G (linie)</h2>
-    <div id="chart1b"></div>
-  </div>
-
-  <div class="card">
-    <h2>Procentowy udział komponentów w FCI-G</h2>
-    <div id="chart2"></div>
-  </div>
-
-  <div class="card">
-    <h2>Historyczne udziały komponentów</h2>
-    <div id="chart3"></div>
-  </div>
-
-  <div class="card">
-    <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
-    <div class="controls">
-      <div class="date-controls">
-        <label>Od: <input type="date" id="startDate" /></label>
-        <label>Do: <input type="date" id="endDate" /></label>
-        <button onclick="applyRange()">Zastosuj</button>
+  <div id="cardsContainer">
+    <!-- 1 -->
+    <section class="card" data-id="card-stacked">
+      <div class="card-header">
+        <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
       </div>
-      <button onclick="quickRange('ytd')">YTD</button>
-      <button onclick="quickRange(1)">1Y</button>
-      <button onclick="quickRange(3)">3Y</button>
-      <button onclick="quickRange(5)">5Y</button>
-      <button onclick="quickRange('all')">All</button>
-    </div>
-    <div id="impactChart"></div>
-  </div>
+      <div class="card-body">
+        <div id="chart1"></div>
+      </div>
+    </section>
 
-  <!-- NOWY #1: Korelacja i 3M rolling -->
-  <div class="card">
-    <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
-    <div class="controls">
-      <label>Od: <input type="month" id="corrFrom" /></label>
-      <label>Do: <input type="month" id="corrTo" /></label>
-      <label style="display:flex; gap:6px; align-items:center;">
-        <input type="checkbox" id="useChanges" checked />
-        Użyj zmian (ΔFCI-G vs log-zwroty BTC)
-      </label>
-      <button id="corrRun">Oblicz korelację</button>
-      <div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
-    </div>
-    <div id="corrRolling3m"></div>
-  </div>
+    <!-- 2 -->
+    <section class="card" data-id="card-lines">
+      <div class="card-header">
+        <h2>Komponenty i FCI-G (linie)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="chart1b"></div>
+      </div>
+    </section>
 
-  <!-- NOWY #2: Symulacja BTC = S·e^(α+β·f) -->
-  <div class="card">
-    <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
-    <div class="controls">
-      <label>Zakres FCI-G (min,max):
-        <input type="text" id="simRange" value="-3,3" />
-      </label>
-      <label>FCI-G:
-        <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" />
-      </label>
-      <div><strong>BTC:</strong> <span id="simOut">—</span></div>
-      <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
-    </div>
-    <div id="simulationPlot"></div>
-  </div>
+    <!-- 3 -->
+    <section class="card" data-id="card-shares">
+      <div class="card-header">
+        <h2>Procentowy udział komponentów w FCI-G</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="chart2"></div>
+      </div>
+    </section>
 
-  <!-- NOWY #3: BTC vs FCI-G — prediction curve -->
-  <div class="card">
-    <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
-    <div class="controls">
-      <label>Skala Y:
-        <select id="pred-y-scale">
-          <option value="linear">linear</option>
-          <option value="log">log</option>
-        </select>
-      </label>
-      <small style="opacity:.8">Model: BTC(f) = A·e^{k·f}, A=61090.941, k=−1.14035</small>
-    </div>
-    <div id="plot_pred_curve"></div>
+    <!-- 4 -->
+    <section class="card" data-id="card-history-shares">
+      <div class="card-header">
+        <h2>Historyczne udziały komponentów</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="chart3"></div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="card" data-id="card-impact">
+      <div class="card-header">
+        <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <div class="date-controls">
+            <label>Od: <input type="date" id="startDate" /></label>
+            <label>Do: <input type="date" id="endDate" /></label>
+            <button onclick="applyRange()">Zastosuj</button>
+          </div>
+          <button onclick="quickRange('ytd')">YTD</button>
+          <button onclick="quickRange(1)">1Y</button>
+          <button onclick="quickRange(3)">3Y</button>
+          <button onclick="quickRange(5)">5Y</button>
+          <button onclick="quickRange('all')">All</button>
+        </div>
+        <div id="impactChart"></div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="card" data-id="card-corr">
+      <div class="card-header">
+        <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Od: <input type="month" id="corrFrom" /></label>
+          <label>Do: <input type="month" id="corrTo" /></label>
+          <label style="display:flex; gap:6px; align-items:center;">
+            <input type="checkbox" id="useChanges" checked />
+            Użyj zmian (ΔFCI-G vs log-zwroty BTC)
+          </label>
+          <button id="corrRun">Oblicz korelację</button>
+          <div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
+        </div>
+        <div id="corrRolling3m"></div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="card" data-id="card-sim">
+      <div class="card-header">
+        <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Zakres FCI-G (min,max):
+            <input type="text" id="simRange" value="-3,3" />
+          </label>
+          <label>FCI-G:
+            <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" />
+          </label>
+          <div><strong>BTC:</strong> <span id="simOut">—</span></div>
+          <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
+        </div>
+        <div id="simulationPlot"></div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="card" data-id="card-predcurve">
+      <div class="card-header">
+        <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
+        <div class="card-controls">
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij: ⋮⋮">⋮⋮</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="controls">
+          <label>Skala Y:
+            <select id="pred-y-scale">
+              <option value="linear">linear</option>
+              <option value="log">log</option>
+            </select>
+          </label>
+          <small style="opacity:.8">Model: BTC(f) = A·e^{k·f}, A=61090.941, k=−1.14035</small>
+        </div>
+        <div id="plot_pred_curve"></div>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -231,6 +355,8 @@
       initCorrelationComponent();
       initSimulationComponent();
       initPredCurveUI();
+      enableDragAndDrop();   // <— aktywuj DnD i zwijanie po inicjalizacji
+      restoreCardState();    // <— odtwórz kolejność i zwinięcia
     }
 
     function drawCharts(data) {
@@ -478,10 +604,10 @@
 
       function renderPlot(sliderX) {
         const [min, max] = currentRange();
-        const steps = 240;
+        theSteps = 240;
         const xs = [], ys = [];
-        for (let i = 0; i <= steps; i++) {
-          const x = min + (max - min) * i / steps;
+        for (let i = 0; i <= theSteps; i++) {
+          const x = min + (max - min) * i / theSteps;
           xs.push(x); ys.push(fn(x));
         }
         const curve = { x: xs, y: ys, mode: "lines", name: "BTC = A·e^{k·f}" };
@@ -575,6 +701,107 @@
       const sel = document.getElementById("pred-y-scale");
       renderPredictionCurve(sel.value);
       sel.addEventListener("change", () => renderPredictionCurve(sel.value));
+    }
+
+    /* =========================
+       DRAG & DROP + ZWIJANIE
+       ========================= */
+    const ORDER_KEY = "fcig_cards_order";
+    const COLLAPSE_KEY = "fcig_cards_collapsed";
+
+    function enableDragAndDrop(){
+      const container = document.getElementById("cardsContainer");
+      const cards = Array.from(container.querySelectorAll(".card"));
+      cards.forEach(card => {
+        const handle = card.querySelector(".drag-handle");
+        card.setAttribute("draggable", "true");
+
+        // drag only by handle
+        card.addEventListener("dragstart", (e) => {
+          if (!e.target.closest(".drag-handle")) { e.preventDefault(); return; }
+          card.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", card.dataset.id);
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("dragging");
+          saveOrder();
+        });
+      });
+
+      container.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        const dragging = container.querySelector(".card.dragging");
+        if (!dragging) return;
+
+        const after = getDragAfterElement(container, e.clientY);
+        if (after == null) container.appendChild(dragging);
+        else container.insertBefore(dragging, after);
+      });
+
+      // collapse/expand
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".btn-collapse");
+        if (!btn) return;
+        const card = btn.closest(".card");
+        card.classList.toggle("collapsed");
+        saveCollapsed();
+      });
+    }
+
+    function getDragAfterElement(container, y) {
+      const elements = [...container.querySelectorAll(".card:not(.dragging)")];
+      return elements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+    }
+
+    function saveOrder(){
+      const ids = [...document.querySelectorAll("#cardsContainer .card")].map(c => c.dataset.id);
+      localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+    }
+    function saveCollapsed(){
+      const state = {};
+      document.querySelectorAll("#cardsContainer .card").forEach(c => state[c.dataset.id] = c.classList.contains("collapsed"));
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify(state));
+    }
+    function restoreCardState(){
+      const container = document.getElementById("cardsContainer");
+
+      // restore order
+      const orderJson = localStorage.getItem(ORDER_KEY);
+      if (orderJson){
+        try {
+          const order = JSON.parse(orderJson);
+          order.forEach(id => {
+            const el = container.querySelector(`.card[data-id="${id}"]`);
+            if (el) container.appendChild(el);
+          });
+        } catch {}
+      }
+
+      // restore collapsed
+      const collJson = localStorage.getItem(COLLAPSE_KEY);
+      if (collJson){
+        try {
+          const state = JSON.parse(collJson);
+          Object.entries(state).forEach(([id, isCollapsed]) => {
+            const el = container.querySelector(`.card[data-id="${id}"]`);
+            if (el && isCollapsed) el.classList.add("collapsed");
+          });
+        } catch {}
+      }
+
+      // hook collapse buttons initial state save
+      document.querySelectorAll(".btn-collapse").forEach(btn => {
+        btn.addEventListener("click", () => saveCollapsed());
+      });
     }
 
     // Start
