@@ -1,51 +1,27 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>FCI-G Dashboard (Mobile-first)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light dark" />
-  <!-- Plotly (deferred to avoid blocking the parser; executes before our inline script) -->
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     :root{
-      --card-bg:#fff; --bg:#f7fafc; --text:#111827; --muted:#6b7280;
-      --border:#e5e7eb; --shadow:0 10px 25px rgba(0,0,0,0.08);
+      --card-bg:#fff;--shadow:0 10px 25px rgba(0,0,0,0.08);
       --pad:14px;
     }
-    @media (prefers-color-scheme: dark){
-      :root{
-        --card-bg:#0b1220; --bg:#0a0f1a; --text:#e5e7eb; --muted:#9ca3af;
-        --border:#1f2937; --shadow:0 10px 25px rgba(0,0,0,0.40);
-      }
-    }
-    @media (prefers-reduced-motion: reduce){
-      *{animation:none !important; transition:none !important}
-    }
-
     html,body{height:100%}
     body{
       margin:0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      background: var(--bg);
-      color:var(--text);
+      background: #f7fafc;
+      color:#111827;
       display:flex;
       flex-direction:column;
       align-items:center;
       gap:12px;
       padding:12px;
     }
-    #status{
-      width:100%;
-      max-width:1000px;
-      background:#fffbe6;
-      color:#7c5e10;
-      border:1px solid #facc15;
-      padding:10px 12px;
-      border-radius:10px;
-      display:none;
-    }
-    #status.error{ background:#fef2f2; color:#991b1b; border-color:#fecaca }
     #cardsContainer{
       width:100%;
       max-width:1000px;
@@ -59,7 +35,6 @@
       box-shadow:var(--shadow);
       overflow:hidden;
       touch-action: manipulation; /* keep taps snappy */
-      position: relative; /* ensure z-index works while dragging */
     }
     .card.dragging{
       opacity:.95;
@@ -76,7 +51,7 @@
       display:flex; align-items:center; gap:10px;
       padding: var(--pad);
       background:#f1f5f9;
-      border-bottom:1px solid var(--border);
+      border-bottom:1px solid #e5e7eb;
       user-select:none;
     }
     .card-header h2{
@@ -88,9 +63,8 @@
       border-radius:10px; padding:6px 10px; font-size:13px; cursor:pointer;
     }
     .btn:active, .drag-handle:active{transform: scale(0.98)}
-    .btn:focus-visible, .drag-handle:focus-visible{ outline: 2px solid #3b82f6; outline-offset: 2px }
     .drag-handle{font-weight:700; cursor:grab; touch-action:none;}
-    .card-body{padding: var(--pad); background:var(--card-bg);}
+    .card-body{padding: var(--pad); background:#fff;}
     .card.collapsed .card-body{display:none}
     .card.collapsed .btn-collapse::after{content:"▸"}
     .btn-collapse::after{content:"▾"}
@@ -115,39 +89,36 @@
 </head>
 <body>
 
-  <div id="status" role="status" aria-live="polite"></div>
-
   <div id="cardsContainer">
     <section class="card" data-id="card-about">
-      <div class="card-header">
-        <h2>Co mierzy FCI-G?</h2>
-        <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
-        </div>
-      </div>
-      <div class="card-body" style="line-height:1.5">
-        <p style="margin:0 0 8px">
-          <strong>FCI-G</strong> to indeks warunków finansowych opracowany przez FED.
-          Łączy siedem zmiennych: stopę funduszy federalnych, rentowność 10-letnich UST, 30-letnią stopę hipoteczną,
-          spread obligacji korporacyjnych BBB, szeroki indeks akcji, ceny domów oraz nominalny szeroki indeks USD.
-          Wagi pochodzą z modeli (m.in. FRB/US) i odzwierciedlają łączny wpływ <em>trwałej</em> zmiany tych zmiennych
-          na wzrost PKB w kolejnym roku — dzięki czemu indeks interpretuje warunki jako dodające do wzrostu PKB (wartości ujemne)
-          lub odejmujące od wzrostu PKB (dodatnie) dla aktywności gospodarczej.
-        </p>
-        <p style="margin:0;color:#6b7280">
-          Źródło: FEDS Notes, „A New Index to Measure U.S. Financial Conditions”
-          (<a href="https://www.federalreserve.gov/econres/notes/feds-notes/a-new-index-to-measure-us-financial-conditions-20230630.html" target="_blank" rel="noopener">link</a>).
-        </p>
-      </div>
-    </section>
-
+  <div class="card-header">
+    <h2>Co mierzy FCI-G?</h2>
+    <div class="card-controls">
+      <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+      <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
+    </div>
+  </div>
+  <div class="card-body" style="line-height:1.5">
+    <p style="margin:0 0 8px">
+      <strong>FCI-G</strong> to indeks warunków finansowych opracowany przez FED.
+      Łączy siedem zmiennych: stopę funduszy federalnych, rentowność 10-letnich UST, 30-letnią stopę hipoteczną,
+      spread obligacji korporacyjnych BBB, szeroki indeks akcji, ceny domów oraz nominalny szeroki indeks USD.
+      Wagi pochodzą z modeli (m.in. FRB/US) i odzwierciedlają łączny wpływ <em>trwałej</em> zmiany tych zmiennych
+      na wzrost PKB w kolejnym roku — dzięki czemu indeks interpretuje warunki jako dodające do wzrostu PKB (wartości ujemne)
+      lub odejmujące od wzrostu PKB (dodatnie) dla aktywności gospodarczej.
+    </p>
+    <p style="margin:0;color:#6b7280">
+      Źródło: FEDS Notes, „A New Index to Measure U.S. Financial Conditions”
+      (<a href="https://www.federalreserve.gov/econres/notes/feds-notes/a-new-index-to-measure-us-financial-conditions-20230630.html" target="_blank" rel="noopener">link</a>).
+    </p>
+  </div>
+</section>
     <section class="card" data-id="card-stacked">
       <div class="card-header">
         <h2>Financial Conditions (Stacked Bars + FCI-G)</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body"><div id="chart1"></div></div>
@@ -157,8 +128,8 @@
       <div class="card-header">
         <h2>Komponenty i FCI-G (linie)</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body"><div id="chart1b"></div></div>
@@ -168,8 +139,8 @@
       <div class="card-header">
         <h2>Procentowy udział komponentów w FCI-G</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body"><div id="chart2"></div></div>
@@ -179,8 +150,8 @@
       <div class="card-header">
         <h2>Historyczne udziały komponentów</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body"><div id="chart3"></div></div>
@@ -190,20 +161,20 @@
       <div class="card-header">
         <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
         <div class="controls">
           <label>Od: <input type="date" id="startDate" /></label>
           <label>Do: <input type="date" id="endDate" /></label>
-          <button id="btnApplyRange">Zastosuj</button>
-          <button data-quick="ytd">YTD</button>
-          <button data-quick="1">1Y</button>
-          <button data-quick="3">3Y</button>
-          <button data-quick="5">5Y</button>
-          <button data-quick="all">All</button>
+          <button onclick="applyRange()">Zastosuj</button>
+          <button onclick="quickRange('ytd')">YTD</button>
+          <button onclick="quickRange(1)">1Y</button>
+          <button onclick="quickRange(3)">3Y</button>
+          <button onclick="quickRange(5)">5Y</button>
+          <button onclick="quickRange('all')">All</button>
         </div>
         <div id="impactChart"></div>
       </div>
@@ -213,8 +184,8 @@
       <div class="card-header">
         <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
@@ -225,7 +196,7 @@
             <input type="checkbox" id="useChanges" checked /> Użyj zmian (ΔFCI-G vs log-zwroty BTC)
           </label>
           <button id="corrRun">Oblicz korelację</button>
-          <div><strong>Wynik:</strong> <span id="corrValue" aria-live="polite">—</span></div>
+          <div><strong>Wynik:</strong> <span id="corrValue">—</span></div>
         </div>
         <div id="corrRolling3m"></div>
       </div>
@@ -235,13 +206,13 @@
       <div class="card-header">
         <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
         <div class="controls">
-          <label>Zakres FCI-G (min,max): <input type="text" id="simRange" value="-3,3" inputmode="decimal" /></label>
+          <label>Zakres FCI-G (min,max): <input type="text" id="simRange" value="-3,3" /></label>
           <label>FCI-G: <input type="range" id="simSlider" min="-3" max="3" step="0.01" value="0" /></label>
           <div><strong>BTC:</strong> <span id="simOut">—</span></div>
           <div style="opacity:.8">Zakres danych: <code>[-0.78, 1.00]</code> — poza nim (zacienienie) to ekstrapolacja.</div>
@@ -254,8 +225,8 @@
       <div class="card-header">
         <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
         <div class="card-controls">
-          <button class="btn btn-collapse" title="Zwiń/rozwiń" aria-label="Zwiń/rozwiń kartę" aria-expanded="true"></button>
-          <div class="drag-handle" title="Przeciągnij (przytrzymaj)" role="button" tabindex="0" aria-grabbed="false">⋮⋮</div>
+          <button class="btn btn-collapse" title="Zwiń/rozwiń"></button>
+          <div class="drag-handle" title="Przeciągnij (przytrzymaj)">⋮⋮</div>
         </div>
       </div>
       <div class="card-body">
@@ -274,9 +245,6 @@
   </div>
 
   <script>
-  (() => {
-    'use strict';
-
     /* =========================
        Dane wbudowane + model
        ========================= */
@@ -315,39 +283,15 @@
       { month: "2025-04", price: 96524.98 },
       { month: "2025-05", price: 105697.94 },
       { month: "2025-06", price: 105711.78 },
-      { month: "2025-07", price: 113248.73 }
+      { month: "2025-07", price: 113248.73 },
     ];
     const MODEL = { A: 61090.941, k: -1.14035, dataRange: [-0.78, 1.00] };
     const predFn = (f) => MODEL.A * Math.exp(MODEL.k * f);
 
     /* Helpers */
-    const $ = (id) => document.getElementById(id);
     const toMonthKey = (iso) => iso.split("-").slice(0,2).join("-");
-    function showStatus(msg, type="info"){
-      const el = $("status");
-      el.textContent = msg;
-      el.className = type === "error" ? "error" : "";
-      el.style.display = msg ? "block" : "none";
-    }
-    function correlation(x,y){
-      const n=x.length, mx=x.reduce((s,v)=>s+v,0)/n, my=y.reduce((s,v)=>s+v,0)/n;
-      let num=0,dx=0,dy=0; for(let i=0;i<n;i++){const xa=x[i]-mx, yb=y[i]-my; num+=xa*yb; dx+=xa*xa; dy+=yb*yb;}
-      return (dx>0 && dy>0) ? num/Math.sqrt(dx*dy) : NaN;
-    }
-    function rollingCorrelation(a,b,w){
-      const out=new Array(a.length).fill(null);
-      for(let i=w-1;i<a.length;i++){
-        const A=a.slice(i-w+1,i+1), B=b.slice(i-w+1,i+1);
-        const ma=A.reduce((s,v)=>s+v,0)/w, mb=B.reduce((s,v)=>s+v,0)/w;
-        let num=0,da=0,db=0; for(let j=0;j<w;j++){const xa=A[j]-ma, yb=B[j]-mb; num+=xa*yb; da+=xa*xa; db+=yb*yb;}
-        out[i]=(da>0&&db>0)?num/Math.sqrt(da*db):null;
-      }
-      return out;
-    }
-    function parseISO(s){ return s; } // dates are ISO yyyy-mm-dd; string compare works
-
-    /* Shared Plotly config */
-    const PLOT_CONFIG = { responsive: true, displaylogo: false };
+    function correlation(x,y){const n=x.length,mx=x.reduce((s,v)=>s+v,0)/n,my=y.reduce((s,v)=>s+v,0)/n;let num=0,dx=0,dy=0;for(let i=0;i<n;i++){const xa=x[i]-mx,yb=y[i]-my;num+=xa*yb;dx+=xa*xa;dy+=yb*yb;}return num/Math.sqrt(dx*dy);}
+    function rollingCorrelation(a,b,w){const out=new Array(a.length).fill(null);for(let i=w-1;i<a.length;i++){const A=a.slice(i-w+1,i+1),B=b.slice(i-w+1,i+1);const ma=A.reduce((s,v)=>s+v,0)/w,mb=B.reduce((s,v)=>s+v,0)/w;let num=0,da=0,db=0;for(let j=0;j<w;j++){const xa=A[j]-ma,yb=B[j]-mb;num+=xa*yb;da+=xa*xa;db+=yb*yb;}out[i]=(da>0&&db>0)?num/Math.sqrt(da*db):null;}return out;}
 
     /* Dashboard */
     let globalData=[];
@@ -355,117 +299,68 @@
     const componentKeys=["FFR","10Yr Treasury","Mortgage Rate","BBB","Stock Market","House Prices","Dollar"];
 
     async function loadData(){
-      try{
-        showStatus("Wczytuję dane…");
-        const res=await fetch("./data/converted.json", { cache: "no-store" });
-        if(!res.ok) throw new Error("HTTP "+res.status);
-        const data=await res.json(); globalData=data;
-        showStatus(""); // clear banner
-
-        // Set initial range
-        $("startDate").value=data[0].date;
-        $("endDate").value=data[data.length-1].date;
-
-        drawCharts(data);
-        updateImpact(data[0].date,data[data.length-1].date);
-        initCorrelationComponent();
-        initSimulationComponent();
-        initPredCurveUI();
-        enableMobileDnD();
-        restoreCardState();
-        initA11y();
-        bindRangeButtons();
-      }catch(err){
-        console.error(err);
-        showStatus("Nie udało się wczytać danych (data/converted.json). Sprawdź ścieżkę lub uprawnienia.", "error");
-      }
+      const res=await fetch("./data/converted.json");
+      const data=await res.json(); globalData=data;
+      document.getElementById("startDate").value=data[0].date;
+      document.getElementById("endDate").value=data[data.length-1].date;
+      drawCharts(data); updateImpact(data[0].date,data[data.length-1].date);
+      initCorrelationComponent(); initSimulationComponent(); initPredCurveUI();
+      enableMobileDnD(); restoreCardState();
     }
 
     function drawCharts(data){
-      const xDates = data.map(d=>d.date);
-      const traces1=componentKeys.map(k=>({x:xDates,y:data.map(d=>+d[k]),name:k,type:"bar",opacity:0.9}));
-      const fciLine={x:xDates,y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
-      Plotly.newPlot("chart1",[...traces1,fciLine],{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"}, PLOT_CONFIG);
+      const traces1=componentKeys.map(k=>({x:data.map(d=>d.date),y:data.map(d=>+d[k]),name:k,type:"bar",opacity:0.9}));
+      const fciLine={x:data.map(d=>d.date),y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
+      Plotly.newPlot("chart1",[...traces1,fciLine],{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
 
-      const traces1b=componentKeys.map(k=>({x:xDates,y:data.map(d=>+d[k]),mode:"lines",name:k}));
-      const fciLine2={x:xDates,y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
-      Plotly.newPlot("chart1b",[...traces1b,fciLine2],{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"}, PLOT_CONFIG);
+      const traces1b=componentKeys.map(k=>({x:data.map(d=>d.date),y:data.map(d=>+d[k]),mode:"lines",name:k}));
+      const fciLine2={x:data.map(d=>d.date),y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
+      Plotly.newPlot("chart1b",[...traces1b,fciLine2],{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
 
-      const percentData=data.map(d=>{
-        const values=componentKeys.map(k=>Math.abs(+d[k]));
-        const total=values.reduce((a,b)=>a+b,0);
-        const shares={}; componentKeys.forEach((k,i)=>{shares[k]=total>0?(values[i]/total*100):0});
-        return{date:d.date,...shares};
-      });
+      const percentData=data.map(d=>{const values=componentKeys.map(k=>Math.abs(+d[k]));const total=values.reduce((a,b)=>a+b,0);const shares={};componentKeys.forEach((k,i)=>{shares[k]=total>0?(values[i]/total*100):0});return{date:d.date,...shares};});
       const traces2=componentKeys.map(k=>({x:percentData.map(d=>d.date),y:percentData.map(d=>d[k]),name:k,type:"bar"}));
-      Plotly.newPlot("chart2",traces2,{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"}, PLOT_CONFIG);
+      Plotly.newPlot("chart2",traces2,{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
 
       const traces3=componentKeys.map(k=>({x:percentData.map(d=>d.date),y:percentData.map(d=>d[k]),mode:"lines",name:k}));
-      Plotly.newPlot("chart3",traces3,{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"}, PLOT_CONFIG);
+      Plotly.newPlot("chart3",traces3,{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
     }
 
     function updateImpact(startDate,endDate){
-      const data=globalData.filter(d=>parseISO(d.date)>=parseISO(startDate)&&parseISO(d.date)<=parseISO(endDate));
-      if(data.length<2)return;
+      const data=globalData.filter(d=>d.date>=startDate&&d.date<=endDate); if(data.length<2)return;
       const s=data[0], e=data[data.length-1];
       const contrib=[{component:fciKey,delta:+e[fciKey]-+s[fciKey]},...componentKeys.map(k=>({component:k,delta:+e[k]-+s[k]}))].sort((a,b)=>a.delta-b.delta);
-      const trace={type:"bar",x:contrib.map(c=>c.delta),y:contrib.map(c=>c.component),orientation:"h",
-        text:contrib.map(c=>c.delta.toFixed(3)),textposition:"auto",
+      const trace={type:"bar",x:contrib.map(c=>c.delta),y:contrib.map(c=>c.component),orientation:"h",text:contrib.map(c=>c.delta.toFixed(3)),textposition:"outside",
         marker:{color:contrib.map(c=>c.delta>0?"rgba(220,38,38,.85)":(c.delta<0?"rgba(5,150,105,.85)":"rgba(107,114,128,.85)"))}};
-      Plotly.newPlot("impactChart",[trace],{title:`Zmiana poziomu indeksu i komponentów (${s.date} → ${e.date})`,xaxis:{title:"Δ (punkty indeksowe)"},margin:{t:80,r:20,l:150,b:50}}, PLOT_CONFIG);
+      Plotly.newPlot("impactChart",[trace],{title:`Zmiana poziomu indeksu i komponentów (${s.date} → ${e.date})`,xaxis:{title:"Δ (punkty indeksowe)"},margin:{t:80,r:20,l:150,b:50}});
     }
-
     function quickRange(years){
       const data=globalData; if(!data.length)return; const endDate=data[data.length-1].date;
-      const startInput = $("startDate");
-      const endInput = $("endDate");
-      if(years==="all"){startInput.value=data[0].date; endInput.value=endDate;}
-      else if(years==="ytd"){
-        const st = endDate.slice(0,4)+"-01-01";
-        const sd=data.find(d=>d.date>=st);
-        startInput.value=sd?sd.date:data[0].date; endInput.value=endDate;
-      }else{
-        const edYear = parseInt(endDate.slice(0,4), 10);
-        const st = (edYear-years)+"-"+endDate.slice(5);
-        const sd=data.find(d=>d.date>=st);
-        startInput.value=sd?sd.date:data[0].date; endInput.value=endDate;
-      }
+      if(years==="all"){startDate.value=data[0].date; endDateEl.value=endDate;}
+      else if(years==="ytd"){const ed=new Date(endDate);const st=new Date(ed.getFullYear(),0,1);const sd=data.find(d=>new Date(d.date)>=st); startDate.value=sd?sd.date:data[0].date; endDateEl.value=endDate;}
+      else{const ed=new Date(endDate);const st=new Date(ed);st.setFullYear(st.getFullYear()-years);const sd=data.find(d=>new Date(d.date)>=st); startDate.value=sd?sd.date:data[0].date; endDateEl.value=endDate;}
       applyRange();
     }
-
-    function bindRangeButtons(){
-      $("btnApplyRange").addEventListener("click", applyRange);
-      document.querySelectorAll('[data-quick]').forEach(btn=>{
-        btn.addEventListener('click', ()=> quickRange(btn.dataset.quick));
-      });
-    }
-
-    function applyRange(){ updateImpact($("startDate").value, $("endDate").value); }
+    function applyRange(){updateImpact(startDate.value,endDateEl.value)}
+    const startDate=document.getElementById("startDate");
+    const endDateEl=document.getElementById("endDate");
 
     /* Correlation component */
     function initCorrelationComponent(){
-      const corrFrom=$("corrFrom");
-      const corrTo=$("corrTo");
-      const useChanges=$("useChanges");
-      const corrRun=$("corrRun");
-      const corrValue=$("corrValue");
-
       const fciByMonth=new Map(globalData.map(d=>[toMonthKey(d.date),+d[fciKey]]));
       const joined=BTC_SERIES.filter(r=>fciByMonth.has(r.month)).map(r=>({month:r.month,fcig:fciByMonth.get(r.month),btc:r.price})).sort((a,b)=>a.month.localeCompare(b.month));
       corrFrom.value=joined[0].month; corrTo.value=joined[joined.length-1].month;
-
       function toChanges(arr){const out=[];for(let i=1;i<arr.length;i++){const p=arr[i-1],c=arr[i];out.push({month:c.month,d_fcig:c.fcig-p.fcig,r_btc:Math.log(c.btc/p.btc)});}return out;}
-      function drawRolling(x,y){Plotly.newPlot("corrRolling3m",[{x,y,mode:"lines",name:"3M rolling"}],{title:"Korelacja krocząca 3M",yaxis:{range:[-1,1]},xaxis:{title:"Miesiąc"}}, PLOT_CONFIG);}
+      function drawRolling(x,y){Plotly.newPlot("corrRolling3m",[{x,y,mode:"lines",name:"3M rolling"}],{title:"Korelacja krocząca 3M",yaxis:{range:[-1,1]},xaxis:{title:"Miesiąc"}});}
       function run(){
         const from=corrFrom.value, to=corrTo.value;
         let arr=joined.filter(d=>(!from||d.month>=from)&&(!to||d.month<=to));
         if(useChanges.checked){
           const ch=toChanges(arr); if(ch.length<3){corrValue.textContent="—"; drawRolling(ch.map(d=>d.month),[]); return;}
-          const corr=correlation(ch.map(d=>d.d_fcig),ch.map(d=>d.r_btc)); corrValue.textContent=isFinite(corr)?corr.toFixed(3):"—";
+          const corr=correlation(ch.map(d=>d.d_fcig),ch.map(d=>d.r_btc)); corrValue.textContent=corr.toFixed(3);
           const roll=rollingCorrelation(ch.map(d=>d.d_fcig),ch.map(d=>d.r_btc),3); drawRolling(ch.map(d=>d.month),roll);
         }else{
           if(arr.length<3){corrValue.textContent="—"; drawRolling(arr.map(d=>d.month),[]); return;}
-          const corr=correlation(arr.map(d=>d.fcig),arr.map(d=>d.btc)); corrValue.textContent=isFinite(corr)?corr.toFixed(3):"—";
+          const corr=correlation(arr.map(d=>d.fcig),arr.map(d=>d.btc)); corrValue.textContent=corr.toFixed(3);
           const roll=rollingCorrelation(arr.map(d=>d.fcig),arr.map(d=>d.btc),3); drawRolling(arr.map(d=>d.month),roll);
         }
       }
@@ -474,15 +369,8 @@
 
     /* Simulation */
     function initSimulationComponent(){
-      const simRange = $("simRange");
-      const simSlider = $("simSlider");
-      const simOut = $("simOut");
       const fn=(x)=> MODEL.A * Math.exp(MODEL.k * x);
-      function currentRange(){
-        const [a,b]=simRange.value.split(",").map(s=>+s.trim());
-        const min=Number.isFinite(a)?a:-3; const max=Number.isFinite(b)?b:3;
-        simSlider.min=String(min); simSlider.max=String(max); return[min,max];
-      }
+      function currentRange(){const [a,b]=simRange.value.split(",").map(s=>+s.trim()); const min=Number.isFinite(a)?a:-3; const max=Number.isFinite(b)?b:3; simSlider.min=String(min); simSlider.max=String(max); return[min,max];}
       function renderPlot(sliderX){
         const [min,max]=currentRange(), steps=220; const xs=[], ys=[];
         for(let i=0;i<=steps;i++){const x=min+(max-min)*i/steps; xs.push(x); ys.push(fn(x));}
@@ -492,7 +380,7 @@
         if(min<aMin)shapes.push({type:"rect",xref:"x",yref:"paper",x0:min,x1:aMin,y0:0,y1:1,fillcolor:"rgba(200,200,200,0.2)",line:{width:0}});
         if(max>aMax)shapes.push({type:"rect",xref:"x",yref:"paper",x0:aMax,x1:max,y0:0,y1:1,fillcolor:"rgba(200,200,200,0.2)",line:{width:0}});
         shapes.push({type:"line",x0:aMin,x1:aMin,y0:0,y1:1,xref:"x",yref:"paper",line:{dash:"dash",width:1}},{type:"line",x0:aMax,x1:aMax,y0:0,y1:1,xref:"x",yref:"paper",line:{dash:"dash",width:1}});
-        Plotly.newPlot("simulationPlot",[curve,point],{title:"Symulacja ceny BTC dla zadanego FCI-G",xaxis:{title:"FCI-G"},yaxis:{title:"BTC (USD)",type:"log"},shapes}, PLOT_CONFIG);
+        Plotly.newPlot("simulationPlot",[curve,point],{title:"Symulacja ceny BTC dla zadanego FCI-G",xaxis:{title:"FCI-G"},yaxis:{title:"BTC (USD)",type:"log"},shapes});
       }
       function updatePoint(x){Plotly.restyle("simulationPlot",{x:[[x]],y:[[fn(x)]]},[1])}
       simRange.value="-3,3"; simSlider.value="0"; renderPlot(+simSlider.value);
@@ -510,29 +398,30 @@
       const curve={x:fx,y:fy,type:"scatter",mode:"lines",name:"Predicted mean BTC"};
       const lx=[],ly=[],lt=[]; for(let f=fMin; f<=fMax+1e-9; f+=0.25){const ff=+f.toFixed(2); lx.push(ff); ly.push(predFn(ff)); lt.push(ff.toFixed(2));}
       const labels={x:lx,y:ly,text:lt,type:"scatter",mode:"markers+text",name:"FCI-G ticks",textposition:"top center",textfont:{size:10},marker:{size:6,opacity:.7}};
-      Plotly.newPlot("plot_pred_curve",[pts,curve,labels],{title:"BTC vs FCI-G: simple prediction curve (no bands)",xaxis:{title:"FCI-G (full index)"},yaxis:{title:"Bitcoin price (USD)",type:yScale},legend:{orientation:"h"},margin:{t:60,r:20,b:50,l:60}}, PLOT_CONFIG);
+      Plotly.newPlot("plot_pred_curve",[pts,curve,labels],{title:"BTC vs FCI-G: simple prediction curve (no bands)",xaxis:{title:"FCI-G (full index)"},yaxis:{title:"Bitcoin price (USD)",type:yScale},legend:{orientation:"h"},margin:{t:60,r:20,b:50,l:60}});
     }
     function initPredCurveUI(){
-      const sel=$("pred-y-scale"); renderPredictionCurve(sel.value); sel.addEventListener("change",()=>renderPredictionCurve(sel.value));
+      const sel=document.getElementById("pred-y-scale"); renderPredictionCurve(sel.value); sel.addEventListener("change",()=>renderPredictionCurve(sel.value));
     }
 
     /* Mobile-first drag & drop (Pointer Events) */
     const ORDER_KEY="fcig_cards_order";
     const COLLAPSE_KEY="fcig_cards_collapsed";
-    const LONG_PRESS_MS = 220;
     function enableMobileDnD(){
       const container=document.getElementById("cardsContainer");
       const cards=[...container.querySelectorAll(".card")];
       cards.forEach(card=>{
         const handle=card.querySelector(".drag-handle");
         if(!handle) return;
-        let dragging=false, startY=0, curY=0, placeholder=null;
+        let dragging=false, startY=0, curY=0, placeholder=null, scrollLockY=0;
 
         const onMove=(clientY)=>{
           if(!dragging) return;
           curY=clientY;
           const dy=curY-startY;
           card.style.transform=`translateY(${dy}px)`;
+
+          // find insert position
           const after=getAfterByY(container, clientY, card);
           if(after==null) container.appendChild(placeholder);
           else container.insertBefore(placeholder, after);
@@ -544,19 +433,19 @@
         const endDrag=()=>{
           if(!dragging) return;
           dragging=false;
-          handle.setAttribute("aria-grabbed","false");
           card.classList.remove("dragging");
           card.style.transition="transform .12s ease";
           card.style.transform="";
           setTimeout(()=>{ card.style.transition=""; },130);
+          // place card
           if(placeholder && placeholder.parentNode){
             placeholder.parentNode.insertBefore(card, placeholder);
             placeholder.remove();
           }
           saveOrder();
+          // cleanup listeners
           window.removeEventListener("pointermove", pointerMove, {passive:false});
           window.removeEventListener("pointerup", endDrag);
-          window.removeEventListener("pointercancel", endDrag);
           window.removeEventListener("touchmove", touchMove, {passive:false});
           window.removeEventListener("touchend", endDrag);
           document.body.style.overscrollBehaviorY="";
@@ -565,24 +454,25 @@
         const startDragAt=(clientY)=>{
           dragging=true;
           startY=clientY;
-          handle.setAttribute("aria-grabbed","true");
           card.classList.add("dragging");
+          // placeholder
           placeholder=document.createElement("div");
           placeholder.className="card-placeholder";
           placeholder.style.height=card.getBoundingClientRect().height+"px";
           container.insertBefore(placeholder, card.nextSibling);
+          // lock scroll bounce on iOS
           document.body.style.overscrollBehaviorY="contain";
         };
 
+        // Support: pointer (mouse + pen), and touch (Safari)
         handle.addEventListener("pointerdown",(e)=>{
+          // only left button if mouse
           if(e.pointerType==="mouse" && e.button!==0) return;
           e.preventDefault();
           startDragAt(e.clientY);
           window.addEventListener("pointermove", pointerMove, {passive:false});
           window.addEventListener("pointerup", endDrag);
-          window.addEventListener("pointercancel", endDrag);
         });
-
         // Fallback for old iOS: long-press touch
         handle.addEventListener("touchstart",(e)=>{
           const t=e.touches[0]; let longPress=true;
@@ -591,33 +481,20 @@
             startDragAt(t.clientY);
             window.addEventListener("touchmove", touchMove, {passive:false});
             window.addEventListener("touchend", endDrag);
-          }, LONG_PRESS_MS);
+          }, 120); // short press&hold
           const cancel=()=>{ longPress=false; clearTimeout(pressTimer); };
           handle.addEventListener("touchend", cancel, {once:true});
           handle.addEventListener("touchmove", (ev)=>{ if(Math.abs(ev.touches[0].clientY - t.clientY) > 6) cancel(); }, {once:true});
         }, {passive:true});
       });
 
-      // Collapse toggle (and a11y sync)
+      // Collapse toggle
       container.addEventListener("click",(e)=>{
         const btn=e.target.closest(".btn-collapse");
         if(!btn) return;
         const card=btn.closest(".card");
-        const collapsed = card.classList.toggle("collapsed");
-        btn.setAttribute("aria-expanded", String(!collapsed));
+        card.classList.toggle("collapsed");
         saveCollapsed();
-      });
-    }
-
-    function initA11y(){
-      document.querySelectorAll("#cardsContainer .card").forEach((card, idx)=>{
-        const body = card.querySelector(".card-body");
-        const btn = card.querySelector(".btn-collapse");
-        if(body && btn){
-          if(!body.id){ body.id = (card.dataset.id ? card.dataset.id : "card-"+idx) + "-body"; }
-          btn.setAttribute("aria-controls", body.id);
-          btn.setAttribute("aria-expanded", String(!card.classList.contains("collapsed")));
-        }
       });
     }
 
@@ -642,18 +519,13 @@
     function restoreCardState(){
       const container=document.getElementById("cardsContainer");
       const orderJson=localStorage.getItem(ORDER_KEY);
-      if(orderJson){ try{ JSON.parse(orderJson).forEach(id=>{const el=container.querySelector(\`.card[data-id="\${id}"]\`); if(el) container.appendChild(el); }); }catch{} }
+      if(orderJson){ try{ JSON.parse(orderJson).forEach(id=>{const el=container.querySelector(`.card[data-id="${id}"]`); if(el) container.appendChild(el); }); }catch{} }
       const collJson=localStorage.getItem(COLLAPSE_KEY);
-      if(collJson){ try{ const state=JSON.parse(collJson); Object.entries(state).forEach(([id,isCol])=>{const el=container.querySelector(\`.card[data-id="\${id}"]\`); if(el){ el.classList.toggle("collapsed", !!isCol); const btn = el.querySelector(".btn-collapse"); if(btn) btn.setAttribute("aria-expanded", String(!isCol)); }}); }catch{} }
+      if(collJson){ try{ const state=JSON.parse(collJson); Object.entries(state).forEach(([id,isCol])=>{const el=container.querySelector(`.card[data-id="${id}"]`); if(el&&isCol) el.classList.add("collapsed");}); }catch{} }
     }
 
-    // Boot once DOM ready (Plotly is deferred and will have executed)
-    if(document.readyState === "loading"){
-      document.addEventListener("DOMContentLoaded", loadData);
-    }else{
-      loadData();
-    }
-  })();
+    // Boot
+    loadData();
   </script>
 </body>
 </html>
