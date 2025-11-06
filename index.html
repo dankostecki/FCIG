@@ -170,6 +170,7 @@
           <label>Od: <input type="date" id="startDate" /></label>
           <label>Do: <input type="date" id="endDate" /></label>
           <button onclick="applyRange()">Zastosuj</button>
+          <button onclick="quickRange('1m')">1M</button>
           <button onclick="quickRange('ytd')">YTD</button>
           <button onclick="quickRange(1)">1Y</button>
           <button onclick="quickRange(3)">3Y</button>
@@ -335,9 +336,35 @@
     }
     function quickRange(years){
       const data=globalData; if(!data.length)return; const endDate=data[data.length-1].date;
-      if(years==="all"){startDate.value=data[0].date; endDateEl.value=endDate;}
-      else if(years==="ytd"){const ed=new Date(endDate);const st=new Date(ed.getFullYear(),0,1);const sd=data.find(d=>new Date(d.date)>=st); startDate.value=sd?sd.date:data[0].date; endDateEl.value=endDate;}
-      else{const ed=new Date(endDate);const st=new Date(ed);st.setFullYear(st.getFullYear()-years);const sd=data.find(d=>new Date(d.date)>=st); startDate.value=sd?sd.date:data[0].date; endDateEl.value=endDate;}
+      
+      if(years==="all"){
+        startDate.value=data[0].date; 
+        endDateEl.value=endDate;
+      } 
+      else if(years==="1m"){ // <-- DODANA LOGIKA DLA 1M
+        const ed = new Date(endDate);
+        const st = new Date(ed);
+        st.setMonth(st.getMonth() - 1); // Ustawia datę początkową na 1 miesiąc wstecz
+        const sd = data.find(d => new Date(d.date) >= st); // Znajduje najbliższy punkt danych
+        startDate.value = sd ? sd.date : data[0].date; 
+        endDateEl.value = endDate;
+      }
+      else if(years==="ytd"){
+        const ed=new Date(endDate);
+        const st=new Date(ed.getFullYear(),0,1);
+        const sd=data.find(d=>new Date(d.date)>=st); 
+        startDate.value=sd?sd.date:data[0].date; 
+        endDateEl.value=endDate;
+      }
+      else{ // Obsługuje 1Y, 3Y, 5Y
+        const ed=new Date(endDate);
+        const st=new Date(ed);
+        st.setFullYear(st.getFullYear()-years);
+        const sd=data.find(d=>new Date(d.date)>=st); 
+        startDate.value=sd?sd.date:data[0].date; 
+        endDateEl.value=endDate;
+      }
+      
       applyRange();
     }
     function applyRange(){updateImpact(startDate.value,endDateEl.value)}
