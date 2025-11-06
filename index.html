@@ -68,16 +68,13 @@
     .card.collapsed .card-body{display:none}
     .card.collapsed .btn-collapse::after{content:"▸"}
     .btn-collapse::after{content:"▾"}
-
     /* Charts sizing: mobile-first */
     #chart1,#chart1b,#chart2,#chart3,#impactChart{width:100%; height:420px}
     #corrRolling3m,#simulationPlot,#plot_pred_curve{width:100%; height:360px}
-
     .controls{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px}
     .controls input, .controls select, .controls button{
       padding:6px 9px; border:1px solid #d1d5db; border-radius:8px; background:#fff; font-size:14px
     }
-
     /* Larger screens */
     @media (min-width: 700px){
       :root{--pad:16px}
@@ -88,7 +85,6 @@
   </style>
 </head>
 <body>
-
   <div id="cardsContainer">
     <section class="card" data-id="card-about">
   <div class="card-header">
@@ -123,7 +119,6 @@
       </div>
       <div class="card-body"><div id="chart1"></div></div>
     </section>
-
     <section class="card" data-id="card-lines">
       <div class="card-header">
         <h2>Komponenty i FCI-G (linie)</h2>
@@ -134,7 +129,6 @@
       </div>
       <div class="card-body"><div id="chart1b"></div></div>
     </section>
-
     <section class="card" data-id="card-shares">
       <div class="card-header">
         <h2>Procentowy udział komponentów w FCI-G</h2>
@@ -145,7 +139,6 @@
       </div>
       <div class="card-body"><div id="chart2"></div></div>
     </section>
-
     <section class="card" data-id="card-history-shares">
       <div class="card-header">
         <h2>Historyczne udziały komponentów</h2>
@@ -156,7 +149,6 @@
       </div>
       <div class="card-body"><div id="chart3"></div></div>
     </section>
-
     <section class="card" data-id="card-impact">
       <div class="card-header">
         <h2>Zmiany komponentów i indeksu w wybranym okresie</h2>
@@ -180,7 +172,6 @@
         <div id="impactChart"></div>
       </div>
     </section>
-
     <section class="card" data-id="card-corr">
       <div class="card-header">
         <h2>FCI-G ↔ BTC — korelacja i 3M rolling (miesięcznie)</h2>
@@ -202,7 +193,6 @@
         <div id="corrRolling3m"></div>
       </div>
     </section>
-
     <section class="card" data-id="card-sim">
       <div class="card-header">
         <h2>Symulacja: BTC = S · e<sup>α + β·FCI_G</sup></h2>
@@ -221,7 +211,6 @@
         <div id="simulationPlot"></div>
       </div>
     </section>
-
     <section class="card" data-id="card-predcurve">
       <div class="card-header">
         <h2>BTC vs FCI-G: Simple Prediction Curve (No Bands)</h2>
@@ -244,7 +233,6 @@
       </div>
     </section>
   </div>
-
   <script>
     /* =========================
        Dane wbudowane + model
@@ -288,17 +276,14 @@
     ];
     const MODEL = { A: 61090.941, k: -1.14035, dataRange: [-0.78, 1.00] };
     const predFn = (f) => MODEL.A * Math.exp(MODEL.k * f);
-
     /* Helpers */
     const toMonthKey = (iso) => iso.split("-").slice(0,2).join("-");
     function correlation(x,y){const n=x.length,mx=x.reduce((s,v)=>s+v,0)/n,my=y.reduce((s,v)=>s+v,0)/n;let num=0,dx=0,dy=0;for(let i=0;i<n;i++){const xa=x[i]-mx,yb=y[i]-my;num+=xa*yb;dx+=xa*xa;dy+=yb*yb;}return num/Math.sqrt(dx*dy);}
     function rollingCorrelation(a,b,w){const out=new Array(a.length).fill(null);for(let i=w-1;i<a.length;i++){const A=a.slice(i-w+1,i+1),B=b.slice(i-w+1,i+1);const ma=A.reduce((s,v)=>s+v,0)/w,mb=B.reduce((s,v)=>s+v,0)/w;let num=0,da=0,db=0;for(let j=0;j<w;j++){const xa=A[j]-ma,yb=B[j]-mb;num+=xa*yb;da+=xa*xa;db+=yb*yb;}out[i]=(da>0&&db>0)?num/Math.sqrt(da*db):null;}return out;}
-
     /* Dashboard */
     let globalData=[];
     const fciKey="FCI-G Index (baseline)";
     const componentKeys=["FFR","10Yr Treasury","Mortgage Rate","BBB","Stock Market","House Prices","Dollar"];
-
     async function loadData(){
       const res=await fetch("./data/converted.json");
       const data=await res.json(); globalData=data;
@@ -308,24 +293,19 @@
       initCorrelationComponent(); initSimulationComponent(); initPredCurveUI();
       enableMobileDnD(); restoreCardState();
     }
-
     function drawCharts(data){
       const traces1=componentKeys.map(k=>({x:data.map(d=>d.date),y:data.map(d=>+d[k]),name:k,type:"bar",opacity:0.9}));
       const fciLine={x:data.map(d=>d.date),y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
       Plotly.newPlot("chart1",[...traces1,fciLine],{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
-
       const traces1b=componentKeys.map(k=>({x:data.map(d=>d.date),y:data.map(d=>+d[k]),mode:"lines",name:k}));
       const fciLine2={x:data.map(d=>d.date),y:data.map(d=>+d[fciKey]),mode:"lines",name:"FCI-G Index (baseline)",line:{color:"#111827",width:3}};
       Plotly.newPlot("chart1b",[...traces1b,fciLine2],{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Value"},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
-
       const percentData=data.map(d=>{const values=componentKeys.map(k=>Math.abs(+d[k]));const total=values.reduce((a,b)=>a+b,0);const shares={};componentKeys.forEach((k,i)=>{shares[k]=total>0?(values[i]/total*100):0});return{date:d.date,...shares};});
       const traces2=componentKeys.map(k=>({x:percentData.map(d=>d.date),y:percentData.map(d=>d[k]),name:k,type:"bar"}));
       Plotly.newPlot("chart2",traces2,{barmode:"stack",xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
-
       const traces3=componentKeys.map(k=>({x:percentData.map(d=>d.date),y:percentData.map(d=>d[k]),mode:"lines",name:k}));
       Plotly.newPlot("chart3",traces3,{xaxis:{tickangle:-45,automargin:true},yaxis:{title:"Share (%)",range:[0,100]},legend:{orientation:"h",y:-0.3},margin:{t:40,r:20,l:50,b:100},hovermode:"x unified"});
     }
-
     function updateImpact(startDate,endDate){
       const data=globalData.filter(d=>d.date>=startDate&&d.date<=endDate); if(data.length<2)return;
       const s=data[0], e=data[data.length-1];
@@ -336,41 +316,41 @@
     }
     function quickRange(years){
       const data=globalData; if(!data.length)return; const endDate=data[data.length-1].date;
-      
+     
       if(years==="all"){
-        startDate.value=data[0].date; 
+        startDate.value=data[0].date;
         endDateEl.value=endDate;
-      } 
-      else if(years==="1m"){ // <-- DODANA LOGIKA DLA 1M
-        const ed = new Date(endDate);
-        const st = new Date(ed);
-        st.setMonth(st.getMonth() - 1); // Ustawia datę początkową na 1 miesiąc wstecz
-        const sd = data.find(d => new Date(d.date) >= st); // Znajduje najbliższy punkt danych
-        startDate.value = sd ? sd.date : data[0].date; 
-        endDateEl.value = endDate;
+      }
+      else if(years==="1m"){
+        if(data.length < 2) {
+          startDate.value = data[0].date;
+          endDateEl.value = endDate;
+        } else {
+          startDate.value = data[data.length-2].date;
+          endDateEl.value = endDate;
+        }
       }
       else if(years==="ytd"){
         const ed=new Date(endDate);
         const st=new Date(ed.getFullYear(),0,1);
-        const sd=data.find(d=>new Date(d.date)>=st); 
-        startDate.value=sd?sd.date:data[0].date; 
+        const sd=data.find(d=>new Date(d.date)>=st);
+        startDate.value=sd?sd.date:data[0].date;
         endDateEl.value=endDate;
       }
       else{ // Obsługuje 1Y, 3Y, 5Y
         const ed=new Date(endDate);
         const st=new Date(ed);
         st.setFullYear(st.getFullYear()-years);
-        const sd=data.find(d=>new Date(d.date)>=st); 
-        startDate.value=sd?sd.date:data[0].date; 
+        const sd=data.find(d=>new Date(d.date)>=st);
+        startDate.value=sd?sd.date:data[0].date;
         endDateEl.value=endDate;
       }
-      
+     
       applyRange();
     }
     function applyRange(){updateImpact(startDate.value,endDateEl.value)}
     const startDate=document.getElementById("startDate");
     const endDateEl=document.getElementById("endDate");
-
     /* Correlation component */
     function initCorrelationComponent(){
       const fciByMonth=new Map(globalData.map(d=>[toMonthKey(d.date),+d[fciKey]]));
@@ -393,7 +373,6 @@
       }
       corrRun.addEventListener("click",run); run();
     }
-
     /* Simulation */
     function initSimulationComponent(){
       const fn=(x)=> MODEL.A * Math.exp(MODEL.k * x);
@@ -415,7 +394,6 @@
       simRange.addEventListener("change",()=>renderPlot(+simSlider.value));
       simSlider.addEventListener("input",()=>{const x=+simSlider.value; updatePoint(x); simOut.textContent=fn(x).toLocaleString(undefined,{maximumFractionDigits:2});});
     }
-
     /* Prediction curve */
     function renderPredictionCurve(yScale="linear"){
       const fciByMonth=new Map(globalData.map(d=>[d.date.slice(0,7),+d[fciKey]]));
@@ -430,7 +408,6 @@
     function initPredCurveUI(){
       const sel=document.getElementById("pred-y-scale"); renderPredictionCurve(sel.value); sel.addEventListener("change",()=>renderPredictionCurve(sel.value));
     }
-
     /* Mobile-first drag & drop (Pointer Events) */
     const ORDER_KEY="fcig_cards_order";
     const COLLAPSE_KEY="fcig_cards_collapsed";
@@ -441,22 +418,18 @@
         const handle=card.querySelector(".drag-handle");
         if(!handle) return;
         let dragging=false, startY=0, curY=0, placeholder=null, scrollLockY=0;
-
         const onMove=(clientY)=>{
           if(!dragging) return;
           curY=clientY;
           const dy=curY-startY;
           card.style.transform=`translateY(${dy}px)`;
-
           // find insert position
           const after=getAfterByY(container, clientY, card);
           if(after==null) container.appendChild(placeholder);
           else container.insertBefore(placeholder, after);
         };
-
         const pointerMove=(e)=>{ e.preventDefault(); onMove(e.clientY); };
         const touchMove=(e)=>{ if(!dragging) return; e.preventDefault(); const t=e.touches[0]; onMove(t.clientY); };
-
         const endDrag=()=>{
           if(!dragging) return;
           dragging=false;
@@ -477,7 +450,6 @@
           window.removeEventListener("touchend", endDrag);
           document.body.style.overscrollBehaviorY="";
         };
-
         const startDragAt=(clientY)=>{
           dragging=true;
           startY=clientY;
@@ -490,7 +462,6 @@
           // lock scroll bounce on iOS
           document.body.style.overscrollBehaviorY="contain";
         };
-
         // Support: pointer (mouse + pen), and touch (Safari)
         handle.addEventListener("pointerdown",(e)=>{
           // only left button if mouse
@@ -514,7 +485,6 @@
           handle.addEventListener("touchmove", (ev)=>{ if(Math.abs(ev.touches[0].clientY - t.clientY) > 6) cancel(); }, {once:true});
         }, {passive:true});
       });
-
       // Collapse toggle
       container.addEventListener("click",(e)=>{
         const btn=e.target.closest(".btn-collapse");
@@ -524,7 +494,6 @@
         saveCollapsed();
       });
     }
-
     function getAfterByY(container, y, draggingEl){
       const els=[...container.querySelectorAll(".card:not(.dragging)")];
       let closest={offset:Number.NEGATIVE_INFINITY, element:null};
@@ -550,7 +519,6 @@
       const collJson=localStorage.getItem(COLLAPSE_KEY);
       if(collJson){ try{ const state=JSON.parse(collJson); Object.entries(state).forEach(([id,isCol])=>{const el=container.querySelector(`.card[data-id="${id}"]`); if(el&&isCol) el.classList.add("collapsed");}); }catch{} }
     }
-
     // Boot
     loadData();
   </script>
