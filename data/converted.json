@@ -4739,5 +4739,16 @@
     "Stock Market": "-0.72713",
     "House Prices": "-0.01022",
     "Dollar": "-0.07904"
+  },
+  {
+    "date": "2025-12-31",
+    "FCI-G Index (baseline)": "-1.06584",
+    "FFR": "-0.066216",
+    "10Yr Treasury": "-0.0131379",
+    "Mortgage Rate": "-0.128853",
+    "BBB": "-0.0720485",
+    "Stock Market": "-0.697066",
+    "House Prices": "-0.0070788",
+    "Dollar": "-0.081446"
   }
 ]
